@@ -1,0 +1,24 @@
+GitHub OIDC module
+==================
+
+Role: let GitHub Actions push images to ECR without storing AWS access
+keys. This is GitHub's token issuer, not the EKS IRSA provider.
+
+This first apply creates 3 Terraform resources.
+Called from the dev root only. The role is account-wide; creating it
+from prod as well would collide.
+
+
+What is created
+
+  - IAM OIDC provider for token.actions.githubusercontent.com
+  - IAM role petclinic-github-actions-role
+    Assumed only by the app repo's main branch
+  - Inline policy: ECR login + push to petclinic-dev/* and petclinic-prod/*
+
+
+How it is used
+
+  A workflow in the app repository requests an OIDC token, assumes this
+  role, and pushes ARM64 images into the ECR repos. The cluster then
+  pulls those images. This module does not build or run the app.

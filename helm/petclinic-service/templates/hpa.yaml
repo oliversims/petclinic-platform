@@ -1,0 +1,58 @@
+# =============================================================================
+# helm/petclinic-service/templates/hpa.yaml
+# Purpose: CPU-based HorizontalPodAutoscaler, rendered when autoscaling.enabled is true.
+# =============================================================================
+
+{{- if .Values.autoscaling.enabled }}
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a HorizontalPodAutoscaler.
+# =============================================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+
+# =============================================================================
+# HPA metadata
+# Purpose: Name, namespace, and labels from chart helpers.
+# =============================================================================
+metadata:
+  name: {{ include "petclinic-service.name" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "petclinic-service.labels" . | nindent 4 }}
+
+# =============================================================================
+# HPA specification
+# Purpose: Scale target, replica bounds, and CPU metric.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Scale target
+  # Purpose: Deployment name must match the chart release name.
+  # =============================================================================
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "petclinic-service.name" . }}
+
+  # =============================================================================
+  # Replica bounds
+  # Purpose: Minimum and maximum replicas from values.
+  # =============================================================================
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+
+  # =============================================================================
+  # CPU metric
+  # Purpose: Scales on average CPU utilization.
+  # =============================================================================
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
+{{- end }}

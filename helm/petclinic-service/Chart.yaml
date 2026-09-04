@@ -1,0 +1,21 @@
+# =============================================================================
+# helm/petclinic-service/Chart.yaml
+# Purpose: One generic chart deployed once per Petclinic service.
+# Per-service differences live in helm-values/; the chart is service-agnostic.
+# =============================================================================
+
+# =============================================================================
+# Chart identity
+# Purpose: Chart API version, name, description, and type.
+# =============================================================================
+apiVersion: v2
+name: petclinic-service
+description: Generic chart for a Spring Petclinic microservice
+type: application
+
+# =============================================================================
+# Versions
+# Purpose: Chart version and application version.
+# =============================================================================
+version: 0.1.0
+appVersion: "4.0.1"

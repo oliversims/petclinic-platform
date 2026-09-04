@@ -1,0 +1,50 @@
+# =============================================================================
+# helm/zipkin/templates/service.yaml
+# Purpose: ClusterIP on 9411. Apps POST spans here; UI may use a dedicated Ingress.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a Service.
+# =============================================================================
+apiVersion: v1
+kind: Service
+
+# =============================================================================
+# Service metadata
+# Purpose: Name, namespace, and labels from chart helpers.
+# =============================================================================
+metadata:
+  name: {{ include "zipkin.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zipkin.labels" . | nindent 4 }}
+
+# =============================================================================
+# Service specification
+# Purpose: Type, selector, and ports from values.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Service type
+  # Purpose: Usually ClusterIP from values.
+  # =============================================================================
+  type: {{ .Values.service.type }}
+
+  # =============================================================================
+  # Pod selector
+  # Purpose: Must match Deployment Pod template labels.
+  # =============================================================================
+  selector:
+    {{- include "zipkin.selectorLabels" . | nindent 4 }}
+
+  # =============================================================================
+  # Service ports
+  # Purpose: Maps Service port to Zipkin HTTP port.
+  # =============================================================================
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: {{ .Values.service.port }}
+      protocol: TCP

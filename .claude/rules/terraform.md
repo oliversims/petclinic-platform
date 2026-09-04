@@ -15,12 +15,18 @@ Every module directory MUST contain:
 - `versions.tf` — required_providers block with version constraints
 
 Environment root modules (`terraform/environments/{env}/`) additionally have:
-- `backend.tf` — S3 backend configuration
-- `terraform.tfvars` — environment-specific variable values (do NOT commit secrets)
+- `backend.tf` — full S3 backend configuration (including bucket). No `backend.hcl` or `backend.hcl.example`.
+- `terraform.tfvars` — MUST set `aws_region`, `environment`, and `project` for that env (do NOT commit secrets). No `terraform.tfvars.example`.
 
 ## Naming Conventions
 
 - Resource names: `petclinic-{env}-{resource}` (e.g., `petclinic-dev-vpc`)
+- Exception: GitHub Actions OIDC role is account-scoped `petclinic-github-actions-role` (module `github-oidc`, **dev root only** — do not add it to prod)
+- DNS: do not create the same public hosted zone from both env roots. Do not `aws_route53_record` alias to an ALB (ExternalDNS does that). LB controller + ExternalDNS use gated `helm_release` like ESO.
+- Observability: `helm_release` in `terraform/modules/observability/`, gated by `install_observability` (same as `install_eso`). Grafana password is `random_password` + sensitive output — never Git. No CloudWatch log groups.
+- Karpenter: `helm_release` in `terraform/modules/karpenter/`, gated by `install_karpenter`. Charts **1.14.0** (`karpenter-crd` then `karpenter`). Namespace `karpenter`, not ArgoCD. On-demand only. Reuse `module.eks.node_role_arn`. Follow `.claude/rules/karpenter.md`.
+- EBS CSI: add-ons + IRSA + gp3 StorageClass live in `terraform/modules/eks/`, gated by `install_ebs_csi`. Addon versions from `data.aws_eks_addon_version` (`most_recent`), never the string `latest`. Include `metrics-server` on that gate (PETPLAT-72).
+- VPC CNI: `enableNetworkPolicy = "true"` on the `vpc-cni` add-on (same gate). Do not install Calico. Do not rewrite the vendored LB controller IAM JSON.
 - Terraform resource identifiers: snake_case (e.g., `aws_vpc.main`, `aws_subnet.private`)
 - Variable names: snake_case, descriptive (e.g., `vpc_cidr_block`, `eks_node_instance_type`)
 - Output names: snake_case, prefixed by resource type (e.g., `vpc_id`, `eks_cluster_endpoint`)
@@ -42,15 +48,17 @@ tags = {
 - Always include `description` and `type`
 - Use `validation` blocks for constrained values (e.g., environment must be "dev" or "prod")
 - Use `sensitive = true` for any secret values
-- Provide sensible `default` values where appropriate
+- Root module: no defaults for `aws_region`, `environment`, or `project` — those come from `terraform.tfvars`
+- Modules: no `default = "petclinic"`; the root module passes `var.project`
+- Do not add files the story did not ask for (`*.example`, `backend.hcl`)
 
 ## Security Requirements
 
 - No inline credentials or hardcoded secrets — use `data "aws_secretsmanager_secret_version"`
 - No public S3 buckets — always include `aws_s3_bucket_public_access_block`
-- No wildcard IAM — use specific actions and resource ARNs
+- **No wildcard IAM** — use specific actions and resource ARNs. Exception: vendored official controller JSON (LB controller, Karpenter 1.14) is skipped in Checkov, not hand-narrowed.
 - Encrypt all storage — RDS, S3, EBS must have encryption enabled
-- Security groups as perimeter — all resources in public subnets (cost optimization, no NAT), SGs enforce access control (see ADR-0001)
+- Private subnets + NAT — ALB in public subnets; EKS and RDS in private. **1 NAT in dev, NAT per AZ in prod.** SGs least-privilege (see ADR-0001)
 - Security groups: deny-all default, allow only required ports
 
 ## State Management

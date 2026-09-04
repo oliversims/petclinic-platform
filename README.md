@@ -22,13 +22,14 @@ petclinic-platform/
 │   │       ├── backend.tf        # S3 state: petclinic/prod/terraform.tfstate
 │   │       └── terraform.tfvars
 │   └── modules/                  # Reusable modules
-│       ├── vpc/                  # VPC, subnets, IGW, security groups (all-public, no NAT)
+│       ├── vpc/                  # VPC, public+private subnets, IGW, NAT (1 dev / 2 prod), SGs
 │       ├── eks/                  # EKS cluster, node groups, OIDC, IAM
 │       ├── ecr/                  # ECR repos (per service per env), lifecycle policies
 │       ├── rds/                  # RDS MySQL, subnet group, parameter group
 │       ├── dns/                  # Route 53, ACM certificates
 │       ├── secrets/              # Secrets Manager resources
-│       └── observability/        # Prometheus, Grafana, CloudWatch, FluentBit
+│       ├── observability/        # Prometheus, Grafana, CloudWatch, FluentBit
+│       └── github-oidc/          # GitHub Actions OIDC role (dev only, account-scoped)
 │
 ├── k8s/                          # Kubernetes Manifests
 │   ├── base/                     # Base manifests (shared across envs)
@@ -52,9 +53,10 @@ petclinic-platform/
 │
 ├── helm-values/                     # Per-service YAML + per-env (dev.yaml, prod.yaml)
 │
-├── .github/workflows/            # CI (GitHub Actions — ArgoCD handles CD)
-│   ├── build-push.yml            # Build images, push to ECR
-│   └── update-image-tags.yml     # Commit image tag updates → ArgoCD deploys
+├── .github/workflows/            # Platform CI (ArgoCD handles CD)
+│   └── update-image-tags.yml     # repository_dispatch → commit image.tag
+│
+│   # App fork (not this repo): .github/workflows/build-push.yml
 │
 ├── scripts/                      # Operational scripts
 │   ├── bootstrap-state.sh        # Create S3 bucket + DynamoDB for TF state
@@ -66,14 +68,14 @@ petclinic-platform/
     ├── incident-playbook.md      # Common failures & fixes
     ├── onboarding.md             # New engineer setup guide
     └── adr/                      # Architecture Decision Records
-        └── 0001-public-subnets.md  # All-public subnet design decision
+        └── 0001-network-layout.md  # Public/private subnets; 1 NAT dev, 2 prod
 ```
 
 ## Tech Stack
 
 | Layer | Tool | Details |
 |-------|------|---------|
-| Cloud | AWS | eu-central-1 |
+| Cloud | AWS | us-east-1 |
 | IaC | Terraform >= 1.6 | AWS provider ~> 5.0, S3 + DynamoDB state |
 | Cluster | Amazon EKS | Managed node groups, OIDC |
 | Registry | Amazon ECR | One repo per service per env, lifecycle policies, scan-on-push |
@@ -84,7 +86,7 @@ petclinic-platform/
 | Observability | Prometheus + Grafana | Micrometer metrics, dashboards, alerts |
 | Logging | FluentBit + CloudWatch | Centralized log aggregation |
 | Tracing | Zipkin | Distributed tracing (OpenTelemetry) |
-| CI | GitHub Actions | OIDC → AWS, build → push ECR → commit image tag |
+| CI | GitHub Actions | App fork builds; platform commits Helm tags; OIDC; no kubectl |
 | CD | ArgoCD | GitOps — watches Git, auto-sync (dev), manual sync (prod) |
 | Packaging | Helm | Generic chart, per-service + per-env values |
 | Node Scaling | Karpenter | NodePools, EC2NodeClass, Spot diversification |

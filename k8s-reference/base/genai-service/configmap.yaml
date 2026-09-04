@@ -1,0 +1,37 @@
+# =============================================================================
+# k8s-reference/base/genai-service/configmap.yaml
+# Purpose: Non-secret settings. Secret values arrive from ESO-synced Secrets.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a ConfigMap.
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+
+# =============================================================================
+# ConfigMap metadata
+# Purpose: Defines the ConfigMap name, namespace, and identifying labels.
+# The Deployment envFrom.configMapRef.name must be exactly genai-service-config.
+# =============================================================================
+metadata:
+  name: genai-service-config
+  namespace: petclinic-dev
+  labels:
+    app.kubernetes.io/name: genai-service
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: service
+
+# =============================================================================
+# ConfigMap data
+# Purpose: Non-secret environment variables injected into the container.
+# SERVER_PORT must match the Deployment containerPort and Service port (8084).
+# CONFIG_SERVER_URL uses the config-server Service DNS name and port 8888.
+# The OpenAI API key comes from the openai-api-key Secret, not this ConfigMap.
+# There is no RDS URL; genai-service does not use the shared database.
+# =============================================================================
+data:
+  SERVER_PORT: "8084"
+  CONFIG_SERVER_URL: "http://config-server:8888"

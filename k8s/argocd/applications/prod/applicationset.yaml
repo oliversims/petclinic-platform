@@ -1,0 +1,96 @@
+# =============================================================================
+# k8s/argocd/applications/prod/applicationset.yaml
+# Purpose: One ApplicationSet that generates the 8 prod Applications. Prod syncs wait for a human.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this resource as an Argo CD ApplicationSet.
+# =============================================================================
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+
+# =============================================================================
+# ApplicationSet metadata
+# Purpose: Names the petclinic-prod ApplicationSet in argocd.
+# =============================================================================
+metadata:
+  name: petclinic-prod
+  namespace: argocd
+
+# =============================================================================
+# ApplicationSet specification
+# Purpose: Generates one Application per Petclinic service.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Go template
+  # Purpose: Enables Go templating in the Application template.
+  # =============================================================================
+  goTemplate: true
+
+  # =============================================================================
+  # Generators
+  # Purpose: One list element per service name.
+  # =============================================================================
+  generators:
+    - list:
+        elements:
+          - service: config-server
+          - service: discovery-server
+          - service: api-gateway
+          - service: customers-service
+          - service: visits-service
+          - service: vets-service
+          - service: genai-service
+          - service: admin-server
+
+  # =============================================================================
+  # Application template
+  # Purpose: Template applied to every generated Application.
+  # =============================================================================
+  template:
+    metadata:
+      name: "{{.service}}-prod"
+      labels:
+        environment: prod
+        app.kubernetes.io/name: "{{.service}}"
+        app.kubernetes.io/part-of: petclinic
+        app.kubernetes.io/managed-by: argocd
+
+    spec:
+      project: petclinic-prod
+
+      # =============================================================================
+      # Multi-source
+      # Purpose: Helm chart plus values ref from the same repo.
+      # =============================================================================
+      sources:
+        - repoURL: https://github.com/GITHUB_ORG/petclinic-platform.git
+          targetRevision: main
+          path: helm/petclinic-service
+          helm:
+            releaseName: "{{.service}}"
+            valueFiles:
+              - $values/helm-values/{{.service}}.yaml
+              - $values/helm-values/prod.yaml
+        - repoURL: https://github.com/GITHUB_ORG/petclinic-platform.git
+          targetRevision: main
+          ref: values
+
+      # =============================================================================
+      # Destination
+      # Purpose: Deploys into petclinic-prod on the in-cluster API.
+      # =============================================================================
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: petclinic-prod
+
+      # =============================================================================
+      # Sync policy
+      # Purpose: No automated sync on purpose: prod syncs are manual.
+      # =============================================================================
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true

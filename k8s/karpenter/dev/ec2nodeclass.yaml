@@ -1,0 +1,70 @@
+# =============================================================================
+# k8s/karpenter/dev/ec2nodeclass.yaml
+# Purpose: Where and how Karpenter launches nodes in dev.
+# Selectors must match VPC module tags; internal-elb separates private subnets.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this resource as a Karpenter EC2NodeClass.
+# =============================================================================
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+
+# =============================================================================
+# EC2NodeClass metadata
+# Purpose: Names the default node class and applies environment labels.
+# =============================================================================
+metadata:
+  name: default
+  labels:
+    app.kubernetes.io/part-of: petclinic
+    environment: dev
+
+# =============================================================================
+# EC2NodeClass specification
+# Purpose: AMI, subnets, security groups, instance profile, and root volume.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # AMI selector
+  # Purpose: Uses the latest Amazon Linux 2023 AMI alias.
+  # =============================================================================
+  amiSelectorTerms:
+    - alias: al2023@latest
+
+  # =============================================================================
+  # Subnet selector
+  # Purpose: Private subnets tagged for this cluster only.
+  # =============================================================================
+  subnetSelectorTerms:
+    - tags:
+        kubernetes.io/role/internal-elb: "1"
+        kubernetes.io/cluster/petclinic-dev: "shared"
+
+  # =============================================================================
+  # Security group selector
+  # Purpose: Uses the managed node group security group.
+  # =============================================================================
+  securityGroupSelectorTerms:
+    - tags:
+        Name: "petclinic-dev-sg-eks-node"
+
+  # =============================================================================
+  # Instance profile
+  # Purpose: IAM identity assumed by Karpenter-launched nodes.
+  # =============================================================================
+  instanceProfile: "petclinic-dev-karpenter-node-profile"
+
+  # =============================================================================
+  # Root volume
+  # Purpose: Encrypted gp3 root volume deleted with the instance.
+  # =============================================================================
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 20Gi
+        volumeType: gp3
+        encrypted: true
+        deleteOnTermination: true

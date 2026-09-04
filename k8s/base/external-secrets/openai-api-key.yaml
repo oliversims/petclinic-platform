@@ -1,0 +1,57 @@
+# =============================================================================
+# k8s/base/external-secrets/openai-api-key.yaml
+# Purpose: Sync the OpenAI API key from Secrets Manager into a Kubernetes Secret for genai-service.
+# The AWS secret is plaintext, so there is no remoteRef.property.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this resource as an ExternalSecret.
+# =============================================================================
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+
+# =============================================================================
+# ExternalSecret metadata
+# Purpose: Defines the ExternalSecret name and namespace.
+# =============================================================================
+metadata:
+  name: openai-api-key
+  namespace: petclinic-dev
+
+# =============================================================================
+# ExternalSecret specification
+# Purpose: Controls refresh, store, target Secret, and synced keys.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Refresh interval
+  # Purpose: How often ESO refreshes the Kubernetes Secret from AWS.
+  # =============================================================================
+  refreshInterval: 1h
+
+  # =============================================================================
+  # Secret store reference
+  # Purpose: Which ClusterSecretStore to use.
+  # Must match ClusterSecretStore.metadata.name.
+  # =============================================================================
+  secretStoreRef:
+    name: aws-secrets-manager
+    kind: ClusterSecretStore
+
+  # =============================================================================
+  # Target Secret
+  # Purpose: Kubernetes Secret that ESO creates and keeps in sync.
+  # =============================================================================
+  target:
+    name: openai-api-key
+
+  # =============================================================================
+  # Synced keys
+  # Purpose: Maps the AWS secret into the OPENAI_API_KEY Kubernetes Secret key.
+  # =============================================================================
+  data:
+    - secretKey: OPENAI_API_KEY
+      remoteRef:
+        key: petclinic/dev/openai-api-key

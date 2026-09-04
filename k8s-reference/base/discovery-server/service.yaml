@@ -1,0 +1,59 @@
+# =============================================================================
+# k8s-reference/base/discovery-server/service.yaml
+# Purpose: ClusterIP on 8761, reachable in-cluster as http://discovery-server:8761.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a Service.
+# =============================================================================
+apiVersion: v1
+kind: Service
+
+# =============================================================================
+# Service metadata
+# Purpose: Defines the Service name, namespace, and identifying labels.
+# The name is the DNS name other Pods use: http://discovery-server:8761.
+# It must match metadata.name on the Deployment and ServiceAccount.
+# =============================================================================
+metadata:
+  name: discovery-server
+  namespace: petclinic-dev
+  labels:
+    app.kubernetes.io/name: discovery-server
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: server
+
+# =============================================================================
+# Service specification
+# Purpose: Defines how traffic reaches the discovery-server Pods.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Service type
+  # Purpose: ClusterIP only; not reachable from the internet.
+  # External traffic enters through the api-gateway Ingress / ALB instead.
+  # =============================================================================
+  type: ClusterIP
+
+  # =============================================================================
+  # Pod selector
+  # Purpose: Identifies the Pods that receive traffic.
+  # Must match the Deployment selector and Pod template labels.
+  # =============================================================================
+  selector:
+    app.kubernetes.io/name: discovery-server
+
+  # =============================================================================
+  # Service ports
+  # Purpose: Forwards Service port 8761 to containerPort 8761.
+  # That targetPort must match the Deployment containerPort 8761.
+  # Other services wait on this name and port in their initContainers.
+  # =============================================================================
+  ports:
+    - name: http
+      port: 8761
+      targetPort: 8761
+      protocol: TCP

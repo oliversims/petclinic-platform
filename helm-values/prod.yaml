@@ -1,0 +1,54 @@
+# =============================================================================
+# helm-values/prod.yaml
+# Purpose: Prod environment overrides. Merged LAST, so what it sets wins.
+# Does not set autoscaling.enabled or podDisruptionBudget.enabled globally.
+# =============================================================================
+
+# =============================================================================
+# Namespace
+# Purpose: Target namespace for all prod releases.
+# =============================================================================
+namespace: petclinic-prod
+
+# =============================================================================
+# Replicas
+# Purpose: Default replica count for request-path services in prod.
+# =============================================================================
+replicaCount: 2
+
+# =============================================================================
+# Per-service replica overrides
+# Purpose: Single-replica services that should not follow replicaCount.
+# =============================================================================
+replicaOverrides:
+  genai-service: 1
+  admin-server: 1
+
+# =============================================================================
+# Container image registry
+# Purpose: ECR registry prefix for petclinic-prod images.
+# ACCOUNT is replaced from Terraform output.
+# =============================================================================
+image:
+  registry: ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/petclinic-prod
+
+# =============================================================================
+# Topology spread
+# Purpose: Spreads Pods across availability zones when replicas > 1.
+# =============================================================================
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
+
+# =============================================================================
+# Public ALB Ingress inputs
+# Purpose: Host, cert, security group, and load balancer name placeholders.
+# =============================================================================
+ingress:
+  host: petclinic.DOMAIN
+  certificateArn: CERT_ARN
+  albSecurityGroupId: ALB_SG_ID
+  loadBalancerName: petclinic-prod
+  # Public ALB only — no groupName (ops tools use petclinic-prod-ops).
+  groupName: ""

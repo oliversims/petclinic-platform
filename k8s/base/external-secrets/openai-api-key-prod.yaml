@@ -1,0 +1,26 @@
+# =============================================================================
+# k8s/base/external-secrets/openai-api-key-prod.yaml
+# Purpose: Sync the OpenAI API key for petclinic-prod from Secrets Manager.
+# =============================================================================
+
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+
+metadata:
+  name: openai-api-key
+  namespace: petclinic-prod
+
+spec:
+  refreshInterval: 1h
+
+  secretStoreRef:
+    name: aws-secrets-manager
+    kind: ClusterSecretStore
+
+  target:
+    name: openai-api-key
+
+  data:
+    - secretKey: OPENAI_API_KEY
+      remoteRef:
+        key: petclinic/prod/openai-api-key

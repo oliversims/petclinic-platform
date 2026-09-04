@@ -1,0 +1,192 @@
+# =============================================================================
+# k8s-reference/base/config-server/deployment.yaml
+# Purpose: Central configuration for every other service. Starts first.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a Deployment.
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+
+# =============================================================================
+# Deployment metadata
+# Purpose: Defines the Deployment name, namespace, and identifying labels.
+# Names used by related YAML files must match these values.
+# =============================================================================
+metadata:
+  name: config-server
+  namespace: petclinic-dev
+  labels:
+    app.kubernetes.io/name: config-server
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: server
+
+# =============================================================================
+# Deployment specification
+# Purpose: Defines how Kubernetes should run and manage the application Pods.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Pod replicas
+  # Purpose: Defines how many config-server Pods should run.
+  # =============================================================================
+  replicas: 1
+
+  # =============================================================================
+  # Pod selector
+  # Purpose: Identifies the Pods managed by this Deployment.
+  # This label must match the Pod template labels and the Service selector.
+  # =============================================================================
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: config-server
+
+  # =============================================================================
+  # Pod template
+  # Purpose: Defines the structure and configuration of each new Pod.
+  # =============================================================================
+  template:
+
+    # =============================================================================
+    # Pod labels
+    # Purpose: Adds labels to every Pod created by this Deployment.
+    # The app name must match the Deployment selector and Service selector.
+    # =============================================================================
+    metadata:
+      labels:
+        app.kubernetes.io/name: config-server
+        app.kubernetes.io/part-of: petclinic
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/component: server
+
+    # =============================================================================
+    # Pod specification
+    # Purpose: Defines the identity, security, initialization, and containers
+    # inside each config-server Pod.
+    # =============================================================================
+    spec:
+
+      # =============================================================================
+      # ServiceAccount
+      # Purpose: Defines the Kubernetes identity used by this Pod.
+      # This name must match ServiceAccount.metadata.name in another YAML file.
+      # =============================================================================
+      serviceAccountName: config-server
+
+      # =============================================================================
+      # Pod security context
+      # Purpose: Runs the Pod as a non-root Linux user.
+      # =============================================================================
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      # =============================================================================
+      # Application containers
+      # Purpose: Defines the main container that runs config-server.
+      # =============================================================================
+      containers:
+
+        # =============================================================================
+        # Config-server container
+        # Purpose: Runs the Spring Boot config-server application.
+        # =============================================================================
+        - name: config-server
+          image: ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/petclinic-dev/config-server:TAG
+
+          # =============================================================================
+          # Container port
+          # Purpose: Defines the HTTP port used by the Spring Boot application.
+          # A Service targetPort must match 8888 or the name "http".
+          # =============================================================================
+          ports:
+            - name: http
+              containerPort: 8888
+              protocol: TCP
+
+          # =============================================================================
+          # Application environment variables
+          # Purpose: Defines the Spring profiles.
+          # There is no Secret referenced here. Config-server starts first and does not wait on RDS or other services.
+          # =============================================================================
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "docker"
+
+          # =============================================================================
+          # ConfigMap environment variables
+          # Purpose: Loads additional environment variables from a ConfigMap.
+          # The ConfigMap name must match ConfigMap.metadata.name.
+          # =============================================================================
+          envFrom:
+            - configMapRef:
+                name: config-server-config
+
+          # =============================================================================
+          # Container resources
+          # Purpose: Defines the minimum and maximum CPU and memory usage.
+          # =============================================================================
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+          # =============================================================================
+          # Startup probe
+          # Purpose: Checks whether the Spring Boot application has started.
+          # The application must provide GET /actuator/health on port 8888.
+          # =============================================================================
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8888
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+
+          # =============================================================================
+          # Readiness probe
+          # Purpose: Checks whether the Pod is ready to receive traffic.
+          # Config-server uses /actuator/health, not /actuator/health/readiness.
+          # Other services' initContainers wait on http://config-server:8888/actuator/health.
+          # =============================================================================
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8888
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          # =============================================================================
+          # Liveness probe
+          # Purpose: Checks whether the application is still running correctly.
+          # Config-server uses /actuator/health, not /actuator/health/liveness.
+          # =============================================================================
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8888
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          # =============================================================================
+          # Container security context
+          # Purpose: Prevents privilege escalation and removes Linux capabilities.
+          # =============================================================================
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+
+            # Spring Boot writes temporary files to /tmp.
+            readOnlyRootFilesystem: false

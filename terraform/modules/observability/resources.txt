@@ -1,0 +1,29 @@
+Observability module
+====================
+
+Role: in-cluster metrics, logs, and traces. Not CloudWatch.
+
+
+What is created now (wave 1)
+
+  - Nothing. install_observability = false skips Helm, SGs, and the
+    Grafana admin password.
+
+
+Held for the second apply (install_observability = true)
+
+  Helm
+  - kube-prometheus-stack, loki, fluent-bit, zipkin
+
+  Grafana / Zipkin HTTPS (when *_ingress_enabled)
+  - Dedicated ALB SGs (CIDR-locked), Ingress annotations, ExternalDNS hosts
+
+  Kubernetes
+  - Loki alerting rules ConfigMap
+  - Grafana dashboard ConfigMaps
+
+
+How it is used
+
+  Grafana and Zipkin URLs appear in outputs only when ingress is active.
+  Prometheus / Alertmanager stay port-forward.

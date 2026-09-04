@@ -1,0 +1,31 @@
+ECR module
+==========
+
+Role: private Docker registries for the eight Spring services.
+CI pushes images here. Nodes pull them.
+
+This first apply creates 16 Terraform resources.
+
+
+What is created
+
+  8 repositories, named petclinic-dev/<service>
+    config-server, discovery-server, api-gateway,
+    customers-service, visits-service, vets-service,
+    genai-service, admin-server
+
+  Each repository
+  - Scan on push
+  - AES256 encryption
+  - Tags are mutable (dev can retag)
+
+  8 lifecycle policies (one per repository)
+  - Delete untagged images after 7 days
+  - Keep only the last 10 tagged images
+
+
+How it is used
+
+  GitHub Actions (github-oidc module) pushes to these repos.
+  The node IAM role can pull. Helm values point image.registry here.
+  The app does not run from this module; it only stores images.

@@ -1,0 +1,78 @@
+# =============================================================================
+# helm/zipkin/values.yaml
+# Purpose: Defaults for the Zipkin chart.
+# In-memory storage on an emptyDir; traces are short-lived and not worth a PVC.
+# =============================================================================
+
+# =============================================================================
+# Replicas
+# Purpose: Number of Zipkin Pods to run.
+# =============================================================================
+replicaCount: 1
+
+# =============================================================================
+# Container image
+# Purpose: Zipkin image repository, tag, and pull policy.
+# =============================================================================
+image:
+  repository: openzipkin/zipkin
+  tag: "3.5.1"
+  pullPolicy: IfNotPresent
+
+# =============================================================================
+# ClusterIP Service defaults
+# Purpose: Service type and Zipkin HTTP port.
+# =============================================================================
+service:
+  type: ClusterIP
+  port: 9411
+
+# =============================================================================
+# Resources
+# Purpose: CPU and memory requests/limits for Zipkin.
+# =============================================================================
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 256Mi
+
+# =============================================================================
+# Span storage
+# Purpose: Uses in-memory storage (mem).
+# =============================================================================
+storageType: mem
+
+# =============================================================================
+# Pod securityContext
+# Purpose: Runs the Pod as a non-root Linux user.
+# =============================================================================
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+# =============================================================================
+# Container securityContext
+# Purpose: Prevents privilege escalation and drops Linux capabilities.
+# =============================================================================
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false
+
+# =============================================================================
+# HTTPS Ingress
+# Purpose: Dedicated ALB for the Zipkin UI when Terraform enables it.
+# =============================================================================
+ingress:
+  enabled: false
+  className: alb
+  host: ""
+  certificateArn: ""
+  albSecurityGroupId: ""
+  loadBalancerName: ""
+  groupName: ""

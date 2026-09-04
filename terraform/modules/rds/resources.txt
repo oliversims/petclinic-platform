@@ -1,0 +1,28 @@
+RDS module
+==========
+
+Role: one shared MySQL database for customers, vets, and visits.
+Not public. Credentials are generated here and stored in Secrets Manager.
+
+This first apply creates 6 Terraform resources.
+
+
+What is created
+
+  - Random 24-character master password (not taken from tfvars)
+  - Secrets Manager secret petclinic/dev/rds-credentials
+    JSON: username + password
+  - Secret version (the current value)
+  - DB subnet group (the two private subnets)
+  - Parameter group (utf8mb4)
+  - MySQL 8.0 instance petclinic-dev-mysql
+    db.t4g.micro, 20 GB gp2, not Multi-AZ, encrypted,
+    7-day backups, not publicly reachable
+
+
+How it is used
+
+  The instance sits in the VPC RDS security group (3306 from EKS nodes only).
+  Later, External Secrets Operator copies rds-credentials into a Kubernetes
+  Secret. The three data services read that Secret. Config-server and the
+  other services do not use this database.

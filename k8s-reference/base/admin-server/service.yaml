@@ -1,0 +1,59 @@
+# =============================================================================
+# k8s-reference/base/admin-server/service.yaml
+# Purpose: ClusterIP on 9090, reachable in-cluster as http://admin-server:9090.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a Service.
+# =============================================================================
+apiVersion: v1
+kind: Service
+
+# =============================================================================
+# Service metadata
+# Purpose: Defines the Service name, namespace, and identifying labels.
+# The name is the DNS name other Pods use: http://admin-server:9090.
+# It must match metadata.name on the Deployment and ServiceAccount.
+# =============================================================================
+metadata:
+  name: admin-server
+  namespace: petclinic-dev
+  labels:
+    app.kubernetes.io/name: admin-server
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: admin
+
+# =============================================================================
+# Service specification
+# Purpose: Defines how traffic reaches the admin-server Pods.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Service type
+  # Purpose: ClusterIP only; not reachable from the internet.
+  # External traffic enters through the api-gateway Ingress / ALB instead.
+  # =============================================================================
+  type: ClusterIP
+
+  # =============================================================================
+  # Pod selector
+  # Purpose: Identifies the Pods that receive traffic.
+  # Must match the Deployment selector and Pod template labels.
+  # =============================================================================
+  selector:
+    app.kubernetes.io/name: admin-server
+
+  # =============================================================================
+  # Service ports
+  # Purpose: Forwards Service port 9090 to containerPort 9090.
+  # That targetPort must match the Deployment containerPort 9090.
+  # Other services register with Discovery; they do not wait on this port to start.
+  # =============================================================================
+  ports:
+    - name: http
+      port: 9090
+      targetPort: 9090
+      protocol: TCP

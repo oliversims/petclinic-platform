@@ -1,0 +1,99 @@
+# =============================================================================
+# k8s/argocd/applications/dev/applicationset.yaml
+# Purpose: One ApplicationSet that generates the 8 dev Applications. Dev auto-syncs from helm-values commits.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this resource as an Argo CD ApplicationSet.
+# =============================================================================
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+
+# =============================================================================
+# ApplicationSet metadata
+# Purpose: Names the petclinic-dev ApplicationSet in argocd.
+# =============================================================================
+metadata:
+  name: petclinic-dev
+  namespace: argocd
+
+# =============================================================================
+# ApplicationSet specification
+# Purpose: Generates one Application per Petclinic service.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Go template
+  # Purpose: Enables Go templating in the Application template.
+  # =============================================================================
+  goTemplate: true
+
+  # =============================================================================
+  # Generators
+  # Purpose: One list element per service name.
+  # =============================================================================
+  generators:
+    - list:
+        elements:
+          - service: config-server
+          - service: discovery-server
+          - service: api-gateway
+          - service: customers-service
+          - service: visits-service
+          - service: vets-service
+          - service: genai-service
+          - service: admin-server
+
+  # =============================================================================
+  # Application template
+  # Purpose: Template applied to every generated Application.
+  # =============================================================================
+  template:
+    metadata:
+      name: "{{.service}}-dev"
+      labels:
+        environment: dev
+        app.kubernetes.io/name: "{{.service}}"
+        app.kubernetes.io/part-of: petclinic
+        app.kubernetes.io/managed-by: argocd
+
+    spec:
+      project: petclinic-dev
+
+      # =============================================================================
+      # Multi-source
+      # Purpose: Helm chart plus values ref from the same repo.
+      # =============================================================================
+      sources:
+        - repoURL: https://github.com/oliversims/petclinic-platform.git
+          targetRevision: main
+          path: helm/petclinic-service
+          helm:
+            releaseName: "{{.service}}"
+            valueFiles:
+              - $values/helm-values/{{.service}}.yaml
+              - $values/helm-values/dev.yaml
+        - repoURL: https://github.com/oliversims/petclinic-platform.git
+          targetRevision: main
+          ref: values
+
+      # =============================================================================
+      # Destination
+      # Purpose: Deploys into petclinic-dev on the in-cluster API.
+      # =============================================================================
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: petclinic-dev
+
+      # =============================================================================
+      # Sync policy
+      # Purpose: Auto-syncs on the dev cluster with prune and self-heal.
+      # =============================================================================
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true

@@ -1,0 +1,226 @@
+# =============================================================================
+# k8s-reference/base/visits-service/deployment.yaml
+# Purpose: Visit records. Backed by the shared petclinic database.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a Deployment.
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+
+# =============================================================================
+# Deployment metadata
+# Purpose: Defines the Deployment name, namespace, and identifying labels.
+# Names used by related YAML files must match these values.
+# =============================================================================
+metadata:
+  name: visits-service
+  namespace: petclinic-dev
+  labels:
+    app.kubernetes.io/name: visits-service
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: service
+
+# =============================================================================
+# Deployment specification
+# Purpose: Defines how Kubernetes should run and manage the application Pods.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Pod replicas
+  # Purpose: Defines how many visits-service Pods should run.
+  # =============================================================================
+  replicas: 1
+
+  # =============================================================================
+  # Pod selector
+  # Purpose: Identifies the Pods managed by this Deployment.
+  # This label must match the Pod template labels and the Service selector.
+  # =============================================================================
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: visits-service
+
+  # =============================================================================
+  # Pod template
+  # Purpose: Defines the structure and configuration of each new Pod.
+  # =============================================================================
+  template:
+
+    # =============================================================================
+    # Pod labels
+    # Purpose: Adds labels to every Pod created by this Deployment.
+    # The app name must match the Deployment selector and Service selector.
+    # =============================================================================
+    metadata:
+      labels:
+        app.kubernetes.io/name: visits-service
+        app.kubernetes.io/part-of: petclinic
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/component: service
+
+    # =============================================================================
+    # Pod specification
+    # Purpose: Defines the identity, security, initialization, and containers
+    # inside each visits-service Pod.
+    # =============================================================================
+    spec:
+
+      # =============================================================================
+      # ServiceAccount
+      # Purpose: Defines the Kubernetes identity used by this Pod.
+      # This name must match ServiceAccount.metadata.name in another YAML file.
+      # =============================================================================
+      serviceAccountName: visits-service
+
+      # =============================================================================
+      # Pod security context
+      # Purpose: Runs the Pod as a non-root Linux user.
+      # =============================================================================
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      # =============================================================================
+      # Init containers
+      # Purpose: Waits for required services before starting the main container.
+      # Service names must match the metadata.name values of their Service YAMLs.
+      # =============================================================================
+      initContainers:
+
+        # =============================================================================
+        # Config Server dependency
+        # Purpose: Waits until the Config Server health endpoint responds.
+        # =============================================================================
+        - name: wait-for-config-server
+          image: busybox:1.36
+          command: ['sh', '-c', 'until wget -qO- http://config-server:8888/actuator/health; do sleep 5; done']
+
+        # =============================================================================
+        # Discovery Server dependency
+        # Purpose: Waits until the Discovery Server health endpoint responds.
+        # =============================================================================
+        - name: wait-for-discovery-server
+          image: busybox:1.36
+          command: ['sh', '-c', 'until wget -qO- http://discovery-server:8761/actuator/health; do sleep 5; done']
+
+      # =============================================================================
+      # Application containers
+      # Purpose: Defines the main container that runs visits-service.
+      # =============================================================================
+      containers:
+
+        # =============================================================================
+        # Visits-service container
+        # Purpose: Runs the Spring Boot visits-service application.
+        # =============================================================================
+        - name: visits-service
+          image: ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/petclinic-dev/visits-service:TAG
+
+          # =============================================================================
+          # Container port
+          # Purpose: Defines the HTTP port used by the Spring Boot application.
+          # A Service targetPort must match 8082 or the name "http".
+          # =============================================================================
+          ports:
+            - name: http
+              containerPort: 8082
+              protocol: TCP
+
+          # =============================================================================
+          # Application environment variables
+          # Purpose: Defines the Spring profiles and database credentials.
+          # Secret names and keys must match the Secret YAML file.
+          # =============================================================================
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "docker,mysql"
+
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: rds-credentials
+                  key: username
+
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rds-credentials
+                  key: password
+
+          # =============================================================================
+          # ConfigMap environment variables
+          # Purpose: Loads additional environment variables from a ConfigMap.
+          # The ConfigMap name must match ConfigMap.metadata.name.
+          # =============================================================================
+          envFrom:
+            - configMapRef:
+                name: visits-service-config
+
+          # =============================================================================
+          # Container resources
+          # Purpose: Defines the minimum and maximum CPU and memory usage.
+          # =============================================================================
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+          # =============================================================================
+          # Startup probe
+          # Purpose: Checks whether the Spring Boot application has started.
+          # The application must provide GET /actuator/health on port 8082.
+          # =============================================================================
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8082
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+
+          # =============================================================================
+          # Readiness probe
+          # Purpose: Checks whether the Pod is ready to receive traffic.
+          # The application must provide GET /actuator/health/readiness.
+          # =============================================================================
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8082
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          # =============================================================================
+          # Liveness probe
+          # Purpose: Checks whether the application is still running correctly.
+          # The application must provide GET /actuator/health/liveness.
+          # =============================================================================
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8082
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          # =============================================================================
+          # Container security context
+          # Purpose: Prevents privilege escalation and removes Linux capabilities.
+          # =============================================================================
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+
+            # Spring Boot writes temporary files to /tmp.
+            readOnlyRootFilesystem: false

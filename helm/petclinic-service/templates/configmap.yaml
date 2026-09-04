@@ -1,0 +1,31 @@
+# =============================================================================
+# helm/petclinic-service/templates/configmap.yaml
+# Purpose: Non-secret settings. SERVER_PORT is derived from service.port.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a ConfigMap.
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+
+# =============================================================================
+# ConfigMap metadata
+# Purpose: Name, namespace, and labels from chart helpers.
+# =============================================================================
+metadata:
+  name: {{ include "petclinic-service.name" . }}-config
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "petclinic-service.labels" . | nindent 4 }}
+
+# =============================================================================
+# ConfigMap data
+# Purpose: SERVER_PORT plus any keys from values.configData.
+# =============================================================================
+data:
+  SERVER_PORT: "{{ .Values.service.port }}"
+  {{- range $key, $value := .Values.configData }}
+  {{ $key }}: "{{ $value }}"
+  {{- end }}

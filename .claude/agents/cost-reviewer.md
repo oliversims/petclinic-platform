@@ -18,7 +18,7 @@ Review infrastructure code for cost implications, estimate monthly spend per env
 ### 1. Compute Costs
 - EKS control plane ($0.10/hour per cluster)
 - EC2 node groups: instance types, count, spot vs on-demand
-- No NAT Gateway (all-public subnet design — intentional cost saving)
+- NAT Gateway: 1 in dev (~$33/mo), 2 in prod (~$65/mo); ~$0.045/hr each + data
 - No bastion host (removed — use kubectl locally or debug pods)
 
 ### 2. Database Costs
@@ -32,8 +32,9 @@ Review infrastructure code for cost implications, estimate monthly spend per env
 - ECR image storage
 
 ### 4. Networking Costs
-- No NAT Gateway (eliminated — saves $32-64/mo)
-- No VPC endpoints needed (no private subnets)
+- NAT Gateway: 1 in dev (cost), 2 in prod (HA)
+- S3 Gateway VPC endpoint (free; private route tables)
+- Interface VPC endpoints optional later (to cut remaining NAT data cost)
 - ALB: per-hour + per-LCU
 - Data transfer between AZs, to internet
 
@@ -46,8 +47,8 @@ Review infrastructure code for cost implications, estimate monthly spend per env
 ## Cost Comparison
 
 Always compare dev vs prod costs and explain why they differ:
-- Dev: single-AZ RDS (db.t4g.micro free tier), 2x t4g.small nodes (Graviton free trial), all-public subnets (no NAT)
-- Prod: single-AZ RDS (db.t4g.micro free tier), 2x t4g.small nodes (Graviton free trial), all-public subnets (no NAT)
+- Dev: single-AZ RDS, 2x t4g.small nodes, private subnets + **1 NAT**
+- Prod: single-AZ RDS, 2x t4g.small nodes, private subnets + **2 NAT**
 
 ## Output Format
 
@@ -61,7 +62,7 @@ Always compare dev vs prod costs and explain why they differ:
 | EKS control plane | $73 | $73 | Fixed cost per cluster |
 | EC2 nodes (2x t4g.small) | $xxx | $xxx | ARM/Graviton free trial |
 | RDS MySQL | $xxx | $xxx | Both single-AZ (Multi-AZ disabled for cost) |
-| NAT Gateway | $0 | $0 | Not used (all-public subnet design) |
+| NAT Gateway | ~$33 (1×) | ~$65 (2×) | $0.045/hr each + data; required for private outbound |
 | ALB | $xxx | $xxx | Per-hour + LCU |
 | ... | ... | ... | ... |
 | **Total** | **$xxx** | **$xxx** | |
@@ -81,9 +82,9 @@ Always compare dev vs prod costs and explain why they differ:
 
 ## Key Pricing Rules of Thumb
 
-- NAT Gateway (NOT used): $0.045/hour + $0.045/GB — we save this by using all-public subnets
+- NAT Gateway: $0.045/hour + $0.045/GB — 1 in dev, 2 in prod (one per AZ)
 - Multi-AZ RDS doubles the instance cost (disabled in this project to save cost — note for students)
 - Spot instances save 60-90% vs on-demand but can be interrupted
-- VPC endpoints (NOT used): $0.01/hour/AZ — not needed with all-public subnets
+- VPC endpoints: S3 Gateway is in E-2 (free). Interface endpoints optional later to reduce remaining NAT data charges.
 - EKS control plane: $0.10/hour = $73/month (fixed, unavoidable)
 - Data transfer between AZs: $0.01/GB each way

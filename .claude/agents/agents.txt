@@ -1,0 +1,38 @@
+AGENTS
+======
+
+Role
+----
+Specialized reviewers. Claude can start one as a sub-agent to inspect
+code. They report issues. They do not change files.
+
+How this project uses them
+--------------------------
+After Terraform, K8s, Helm, pipelines, docs, or cost-related edits,
+Claude can launch the matching reviewer, for example:
+
+  terraform-reviewer   — .tf files (security, tags, cost)
+  k8s-validator        — Kubernetes YAML
+  pipeline-reviewer    — GitHub Actions
+  security-auditor     — secrets, IAM, open SGs
+  cost-reviewer        — AWS spend
+  doc-reviewer         — docs stay accurate
+
+How we define them
+------------------
+One .md file per agent, with YAML at the top:
+
+  ---
+  name: terraform-reviewer
+  description: When to use this agent.
+  tools: Read, Grep, Glob
+  model: haiku
+  ---
+
+  Then the checklist and instructions.
+
+Tiny example
+------------
+You change terraform/modules/vpc/main.tf.
+Claude starts terraform-reviewer.
+It flags a missing Project tag. You decide whether to fix it.

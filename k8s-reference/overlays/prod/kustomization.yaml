@@ -1,0 +1,98 @@
+# =============================================================================
+# k8s-reference/overlays/prod/kustomization.yaml
+# Purpose: Prod namespace, petclinic-prod image prefix, prod Secrets Manager keys.
+#
+# Image registry host comes from Terraform output ecr_registry (replace ACCOUNT).
+# RDS JDBC URL comes from Terraform output rds_jdbc_url.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines a Kustomize overlay that wraps k8s-reference/base for the prod cluster.
+# Apply with: kubectl apply -k k8s-reference/overlays/prod
+# Argo CD does not use this overlay; it deploys helm/petclinic-service with
+# values from helm-values/prod.yaml instead.
+# =============================================================================
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# =============================================================================
+# Target namespace
+# Purpose: Defines the namespace Kustomize stamps onto every resource from ../../base.
+# Must match helm-values/prod.yaml (namespace: petclinic-prod) and the
+# destination in k8s/argocd/projects/petclinic-prod.yaml.
+# =============================================================================
+namespace: petclinic-prod
+
+# =============================================================================
+# Base resources plus prod-only scaling objects
+# Purpose: Defines the shared workload list from k8s-reference/base/kustomization.yaml, then
+# adds k8s-reference/overlays/prod/hpa.yaml and k8s-reference/overlays/prod/pdb.yaml.
+# Dev has neither file — see k8s-reference/overlays/dev/kustomization.yaml.
+# =============================================================================
+resources:
+  - ../../base
+  - hpa.yaml
+  - pdb.yaml
+
+# =============================================================================
+# Image repository rewrite: petclinic-dev -> petclinic-prod
+# Purpose: Defines ECR repository names for prod. Each `name` must match the image
+# string in the corresponding k8s-reference/base/<service>/deployment.yaml.
+# Replace ACCOUNT with Terraform output ecr_registry (the host only).
+# helm-values/prod.yaml sets image.registry to the same petclinic-prod prefix.
+# =============================================================================
+images:
+  - name: ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/petclinic-dev/config-server
+    newName: ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/petclinic-prod/config-server
+  - name: ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/petclinic-dev/discovery-server
+    newName: ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/petclinic-prod/discovery-server
+  - name: ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/petclinic-dev/api-gateway
+    newName: ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/petclinic-prod/api-gateway
+  - name: ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/petclinic-dev/customers-service
+    newName: ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/petclinic-prod/customers-service
+  - name: ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/petclinic-dev/visits-service
+    newName: ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/petclinic-prod/visits-service
+  - name: ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/petclinic-dev/vets-service
+    newName: ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/petclinic-prod/vets-service
+  - name: ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/petclinic-dev/genai-service
+    newName: ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/petclinic-prod/genai-service
+  - name: ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/petclinic-dev/admin-server
+    newName: ACCOUNT.dkr.ecr.us-east-1.amazonaws.com/petclinic-prod/admin-server
+
+# =============================================================================
+# Patches: retarget ExternalSecrets at prod Secrets Manager keys (reference)
+# Purpose: Kept as examples. Not applied in this reference build because live
+# ExternalSecrets live under k8s/base/external-secrets/ (Kustomize cannot load
+# them from outside this tree). Live prod keys use *-prod.yaml there instead.
+# Patch bodies remain in:
+#   k8s-reference/overlays/prod/rds-credentials-patch.yaml
+#   k8s-reference/overlays/prod/openai-api-key-patch.yaml
+# =============================================================================
+
+# =============================================================================
+# Replica counts for every Deployment
+# Purpose: Defines how many Pods each Deployment should run. Each name must match
+# metadata.name of a Deployment in k8s-reference/base/<service>/deployment.yaml.
+# Prod replica counts (PETPLAT-46). Two for anything on the request path;
+# one for genai-service and admin-server, which are lower priority.
+# Services with count: 2 also have a PodDisruptionBudget in pdb.yaml.
+# Services that scale further are listed in hpa.yaml.
+# =============================================================================
+replicas:
+  - name: config-server
+    count: 2
+  - name: discovery-server
+    count: 2
+  - name: api-gateway
+    count: 2
+  - name: customers-service
+    count: 2
+  - name: visits-service
+    count: 2
+  - name: vets-service
+    count: 2
+  - name: genai-service
+    count: 1
+  - name: admin-server
+    count: 1

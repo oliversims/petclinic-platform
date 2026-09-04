@@ -1,0 +1,298 @@
+# =============================================================================
+# k8s-reference/overlays/prod/hpa.yaml
+# Purpose: CPU autoscaling for the stateless prod services (PETPLAT-47).
+#
+# config-server, discovery-server, and admin-server are deliberately absent:
+# they hold cluster state or are single-instance tooling.
+#
+# These stay inert until Metrics Server is installed (PETPLAT-72) — without
+# metrics the HPA reports <unknown> and does not scale.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type — api-gateway
+# Purpose: Defines a HorizontalPodAutoscaler included by
+# k8s-reference/overlays/prod/kustomization.yaml.
+# Helm equivalent: helm-values/api-gateway.yaml autoscaling (prod only).
+# =============================================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+
+# =============================================================================
+# Metadata: identity and labels — api-gateway
+# Purpose: Defines this HPA's name. Namespace comes from the overlay (petclinic-prod).
+# =============================================================================
+metadata:
+  name: api-gateway
+  labels:
+    app.kubernetes.io/name: api-gateway
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: gateway
+
+# =============================================================================
+# HPA specification — api-gateway
+# Purpose: Defines how Kubernetes should scale the api-gateway Deployment.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Scale target: the Deployment this HPA controls
+  # Purpose: Defines which Deployment to scale. The name must match
+  # metadata.name in k8s-reference/base/api-gateway/deployment.yaml and the
+  # replica entry in k8s-reference/overlays/prod/kustomization.yaml.
+  # =============================================================================
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: api-gateway
+
+  # =============================================================================
+  # Replica floor and ceiling
+  # Purpose: Defines the replica range. minReplicas matches the overlay replica
+  # count (2) so HPA never scales below the PDB in pdb.yaml.
+  # =============================================================================
+  minReplicas: 2
+  maxReplicas: 6
+
+  # =============================================================================
+  # Scaling metric
+  # Purpose: Defines CPU utilization as the scale signal. Requires Metrics Server
+  # (PETPLAT-72). CPU requests come from the Deployment resources block
+  # in k8s-reference/base/api-gateway/deployment.yaml.
+  # =============================================================================
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+# =============================================================================
+# Kubernetes API and resource type — customers-service
+# Purpose: Defines a HorizontalPodAutoscaler for customers-service, included by
+# k8s-reference/overlays/prod/kustomization.yaml.
+# =============================================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+
+# =============================================================================
+# Metadata: identity and labels — customers-service
+# Purpose: Defines this HPA's name. Labels match k8s-reference/base/customers-service/deployment.yaml.
+# =============================================================================
+metadata:
+  name: customers-service
+  labels:
+    app.kubernetes.io/name: customers-service
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: service
+
+# =============================================================================
+# HPA specification — customers-service
+# Purpose: Defines how Kubernetes should scale the customers-service Deployment.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Scale target: the Deployment this HPA controls
+  # Purpose: Defines which Deployment to scale. Must match
+  # k8s-reference/base/customers-service/deployment.yaml.
+  # =============================================================================
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: customers-service
+
+  # =============================================================================
+  # Replica floor and ceiling
+  # Purpose: Defines the replica range. minReplicas matches the overlay count and
+  # the PDB minAvailable: 1 in pdb.yaml.
+  # =============================================================================
+  minReplicas: 2
+  maxReplicas: 4
+
+  # =============================================================================
+  # Scaling metric
+  # Purpose: Defines CPU utilization as the scale signal. CPU requests come from
+  # k8s-reference/base/customers-service/deployment.yaml.
+  # =============================================================================
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+# =============================================================================
+# Kubernetes API and resource type — visits-service
+# Purpose: Defines a HorizontalPodAutoscaler for visits-service, included by
+# k8s-reference/overlays/prod/kustomization.yaml.
+# =============================================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+
+# =============================================================================
+# Metadata: identity and labels — visits-service
+# Purpose: Defines this HPA's name. Labels match k8s-reference/base/visits-service/deployment.yaml.
+# =============================================================================
+metadata:
+  name: visits-service
+  labels:
+    app.kubernetes.io/name: visits-service
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: service
+
+# =============================================================================
+# HPA specification — visits-service
+# Purpose: Defines how Kubernetes should scale the visits-service Deployment.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Scale target: the Deployment this HPA controls
+  # Purpose: Defines which Deployment to scale. Must match
+  # k8s-reference/base/visits-service/deployment.yaml.
+  # =============================================================================
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: visits-service
+
+  # =============================================================================
+  # Replica floor and ceiling
+  # Purpose: Defines the replica range. minReplicas matches the overlay count and
+  # the PDB in pdb.yaml.
+  # =============================================================================
+  minReplicas: 2
+  maxReplicas: 4
+
+  # =============================================================================
+  # Scaling metric
+  # Purpose: Defines CPU utilization as the scale signal. CPU requests come from
+  # k8s-reference/base/visits-service/deployment.yaml.
+  # =============================================================================
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+# =============================================================================
+# Kubernetes API and resource type — vets-service
+# Purpose: Defines a HorizontalPodAutoscaler for vets-service, included by
+# k8s-reference/overlays/prod/kustomization.yaml.
+# =============================================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+
+# =============================================================================
+# Metadata: identity and labels — vets-service
+# Purpose: Defines this HPA's name. Labels match k8s-reference/base/vets-service/deployment.yaml.
+# =============================================================================
+metadata:
+  name: vets-service
+  labels:
+    app.kubernetes.io/name: vets-service
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: service
+
+# =============================================================================
+# HPA specification — vets-service
+# Purpose: Defines how Kubernetes should scale the vets-service Deployment.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Scale target: the Deployment this HPA controls
+  # Purpose: Defines which Deployment to scale. Must match
+  # k8s-reference/base/vets-service/deployment.yaml.
+  # =============================================================================
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: vets-service
+
+  # =============================================================================
+  # Replica floor and ceiling
+  # Purpose: Defines the replica range. minReplicas matches the overlay count and
+  # the PDB in pdb.yaml.
+  # =============================================================================
+  minReplicas: 2
+  maxReplicas: 4
+
+  # =============================================================================
+  # Scaling metric
+  # Purpose: Defines CPU utilization as the scale signal. CPU requests come from
+  # k8s-reference/base/vets-service/deployment.yaml.
+  # =============================================================================
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+---
+# =============================================================================
+# Kubernetes API and resource type — genai-service
+# Purpose: Defines a HorizontalPodAutoscaler for genai-service, included by
+# k8s-reference/overlays/prod/kustomization.yaml.
+# =============================================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+
+# =============================================================================
+# Metadata: identity and labels — genai-service
+# Purpose: Defines this HPA's name. Labels match k8s-reference/base/genai-service/deployment.yaml.
+# =============================================================================
+metadata:
+  name: genai-service
+  labels:
+    app.kubernetes.io/name: genai-service
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: service
+
+# =============================================================================
+# HPA specification — genai-service
+# Purpose: Defines how Kubernetes should scale the genai-service Deployment.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Scale target: the Deployment this HPA controls
+  # Purpose: Defines which Deployment to scale. Must match
+  # k8s-reference/base/genai-service/deployment.yaml.
+  # =============================================================================
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: genai-service
+
+  # =============================================================================
+  # Replica floor and ceiling
+  # Purpose: Defines the replica range. minReplicas is 1 because the overlay keeps
+  # genai-service at one replica; there is no PDB for this service.
+  # =============================================================================
+  minReplicas: 1
+  maxReplicas: 3
+
+  # =============================================================================
+  # Scaling metric
+  # Purpose: Defines CPU utilization as the scale signal. CPU requests come from
+  # k8s-reference/base/genai-service/deployment.yaml.
+  # =============================================================================
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

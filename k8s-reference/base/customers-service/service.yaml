@@ -1,0 +1,59 @@
+# =============================================================================
+# k8s-reference/base/customers-service/service.yaml
+# Purpose: ClusterIP on 8081, reachable in-cluster as http://customers-service:8081.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a Service.
+# =============================================================================
+apiVersion: v1
+kind: Service
+
+# =============================================================================
+# Service metadata
+# Purpose: Defines the Service name, namespace, and identifying labels.
+# The name is the DNS name other Pods use: http://customers-service:8081.
+# It must match metadata.name on the Deployment and ServiceAccount.
+# =============================================================================
+metadata:
+  name: customers-service
+  namespace: petclinic-dev
+  labels:
+    app.kubernetes.io/name: customers-service
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: service
+
+# =============================================================================
+# Service specification
+# Purpose: Defines how traffic reaches the customers-service Pods.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Service type
+  # Purpose: ClusterIP only; not reachable from the internet.
+  # External traffic enters through the api-gateway Ingress / ALB instead.
+  # =============================================================================
+  type: ClusterIP
+
+  # =============================================================================
+  # Pod selector
+  # Purpose: Identifies the Pods that receive traffic.
+  # Must match the Deployment selector and Pod template labels.
+  # =============================================================================
+  selector:
+    app.kubernetes.io/name: customers-service
+
+  # =============================================================================
+  # Service ports
+  # Purpose: Forwards Service port 8081 to containerPort 8081.
+  # That targetPort must match the Deployment containerPort 8081.
+  # Other services wait on this name and port via Config Server / Discovery.
+  # =============================================================================
+  ports:
+    - name: http
+      port: 8081
+      targetPort: 8081
+      protocol: TCP

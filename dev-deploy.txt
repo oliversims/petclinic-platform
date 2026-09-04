@@ -1,0 +1,159 @@
+DEV DEPLOY — petclinic-dev / us-east-1
+======================================
+
+
+BEFORE FIRST APPLY
+------------------
+[x] All install_* = false in terraform.tfvars
+[x] domain_name = simsoliver.com (reuse existing zone)
+[x] create_acm_certificate = true
+[x] public_access_cidrs = your current public IP /32
+[x] openai_api_key + budget email set in tfvars
+
+
+WAVE 1 — first apply
+--------------------
+In .claude, before apply (in this order):
+  1. /terraform-plan dev
+  2. Optional: /review-terraform then /security-scan
+  3. /terraform-apply dev   (only after you reviewed the plan)
+
+Or by hand:
+  cd terraform/environments/dev
+  terraform init
+  terraform plan -out plan.out
+  terraform apply plan.out
+
+Creates: VPC, EKS (2 nodes), ECR, RDS, OpenAI secret,
+         GitHub OIDC, ACM cert, budget.
+
+Does not create: Helm add-ons, apps, Argo CD, Ingress.
+
+After:
+  [ ] Accept budget confirmation email
+  [ ] Run: terraform output -raw kubeconfig_command  (then run that command)
+  [ ] kubectl get nodes   → 2 Ready
+  [ ] ACM cert = ISSUED
+
+
+WAVE 2 — second apply
+---------------------
+Prereq: wave 1 done, nodes Ready, ACM ISSUED.
+
+1. Set all install_* = true in terraform.tfvars
+2. terraform plan -out plan.out && terraform apply plan.out
+
+Creates: EBS CSI + add-ons, ESO, LB controller, ExternalDNS,
+         observability, Karpenter. Grafana and Zipkin HTTPS come up here.
+Does not install: Argo CD or the Petclinic apps.
+
+
+BEFORE KUBECTL — optional checks in .claude
+-------------------------------------------
+1. k8s-validator
+   k8s-validator is a read-only review agent. It checks Kubernetes YAML against
+   project standards (labels, probes, resources, conventions) and reports
+   findings — it does not fix or apply anything.
+   In Claude: Run the k8s-validator agent on k8s/ (live), k8s-reference/
+              (pre-Helm reference), k8s/karpenter/dev/, and k8s/argocd/
+
+2. security-auditor (optional)
+   Security Auditor is a read-only review agent. It scans Terraform, Kubernetes,
+   and CI for security issues and reports them — it does not fix or apply anything.
+   In Claude: Run the security-auditor agent
+
+3. kubectl kustomize k8s/argocd/install/
+   This dry-renders the Argo CD install manifests locally so you can confirm
+   they build — it does not apply anything to the cluster.
+   Terminal: kubectl kustomize k8s/argocd/install/
+
+4. scripts/validate-helm.sh
+   This runs Helm checks on the charts and values: it validates the chart
+   (lint) and prints the Kubernetes YAML that would be created (template)
+   so you can confirm it looks right — it does not install anything on the
+   cluster. Run after placeholders in helm-values are filled.
+   Terminal: from petclinic-platform root, run scripts/validate-helm.sh
+
+Skip for now:
+  /review-terraform
+    Reviews Terraform for security, naming, and conventions — wave 1–2 already done.
+  /security-scan
+    Runs Checkov on Terraform and categorizes findings — wave 1–2 already done.
+
+Skip until apps exist:
+  /deploy-dev
+    Syncs Argo CD Applications into petclinic-dev (or bootstraps if Argo is down).
+  /smoke-test
+    Hits deployed service health endpoints to verify the apps are up.
+
+
+AFTER TERRAFORM — deploy in this order
+--------------------------------------
+Do not kubectl apply k8s-reference/ — that tree is pre-Helm reference only.
+Live path: k8s/base (namespaces/ESO), k8s/karpenter, k8s/argocd, Helm via Argo.
+
+1. Cluster health
+   Check:  kubectl get pods -A
+   Expect: add-on pods Running (ESO, LB controller, ExternalDNS,
+           monitoring, Karpenter). No CrashLoopBackOff.
+
+2. Namespaces + secrets bridge
+   kubectl apply -f k8s/base/namespaces.yaml
+   Check:  kubectl get ns petclinic-dev petclinic-prod
+   Expect: both Active
+
+   kubectl apply -f k8s/base/external-secrets/cluster-secret-store.yaml
+   Check:  kubectl get clustersecretstore aws-secrets-manager
+   Expect: NAME=aws-secrets-manager, READY=True
+
+3. Karpenter NodePool / EC2NodeClass (kubectl, not Terraform)
+   Check:  kubectl get nodepool,ec2nodeclass
+   Expect: both READY=True — if so, skip. Else: kubectl apply -f k8s/karpenter/dev/
+
+4. Argo CD
+   kubectl apply -k k8s/argocd/install/ --server-side --force-conflicts
+   Check:  kubectl get pods -n argocd
+   Expect: argocd-server (and related pods) Running
+   # --server-side: ApplicationSet CRD is too large for client-side apply
+
+   Fill CERT_ARN + ALB_SG_ID in k8s/argocd/ingress/dev.yaml from terraform output
+   kubectl apply -f k8s/argocd/ingress/dev.yaml
+   Check:  kubectl get ingress -n argocd
+   Expect: ADDRESS set (shared petclinic-dev ALB hostname)
+
+   UI: https://argocd-dev.simsoliver.com  (user: admin)
+   Password (PowerShell):
+     $b64 = kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}"
+     [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($b64))
+
+   kubectl apply -f k8s/argocd/projects/petclinic-dev.yaml
+   Check:  kubectl get appproject -n argocd petclinic-dev
+   Expect: NAME=petclinic-dev
+
+5. Helm values
+   Fill helm-values/dev.yaml from terraform output
+   (DOMAIN, CERT_ARN, ALB_SG_ID, registry, JDBC URL)
+   Check:  no placeholders left (ACCOUNT, DOMAIN, CERT_ARN, ALB_SG_ID)
+   Expect: real ECR registry, hostname, cert ARN, SG id, JDBC URL
+
+6. Apps
+   kubectl apply -f k8s/argocd/applications/dev/applicationset.yaml
+   Check:  kubectl get applications -n argocd
+   Expect: 8 Applications Synced/Healthy (may take a few minutes)
+
+   Check:  kubectl get ingress -n petclinic-dev
+   Expect: ADDRESS set; https://petclinic-dev.simsoliver.com reachable
+
+7. Grafana
+   user: admin
+   password: terraform output -raw grafana_admin_password
+   Check:  open https://grafana-dev.simsoliver.com and sign in
+   Expect: Grafana home after login
+
+
+URLs
+----
+  https://petclinic-dev.simsoliver.com
+  https://grafana-dev.simsoliver.com
+  https://zipkin-dev.simsoliver.com
+  https://argocd-dev.simsoliver.com

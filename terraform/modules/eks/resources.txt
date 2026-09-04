@@ -1,0 +1,34 @@
+EKS module
+==========
+
+Role: the Kubernetes control plane and the managed node group that runs
+system pods (and later the app).
+
+
+What is created now
+
+  Control plane
+  - IAM role + AmazonEKSClusterPolicy for EKS itself
+  - EKS cluster (public API CIDR-locked; private API on)
+  - IAM OIDC provider for IRSA
+  - Access entry + cluster-admin for the applying principal
+
+  Workers
+  - IAM role for nodes (worker, CNI, ECR pull)
+  - Launch template (encrypted gp3 disk, node security groups)
+  - Managed node group
+
+
+Held for the second apply (install_ebs_csi = true)
+
+  - IAM role for the EBS CSI driver
+  - 5 EKS add-ons: vpc-cni, kube-proxy, coredns, aws-ebs-csi-driver,
+    metrics-server
+  - gp3 StorageClass (default) for Prometheus / Grafana / Loki PVCs
+
+
+How it is used
+
+  kubectl talks to this cluster.
+  Later modules use the OIDC provider for IRSA.
+  Karpenter reuses the same node IAM role for extra nodes.

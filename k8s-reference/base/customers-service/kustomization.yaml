@@ -1,0 +1,22 @@
+# =============================================================================
+# k8s-reference/base/customers-service/kustomization.yaml
+# Purpose: Lists the four YAML objects that make up customers-service.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this resource as a Kustomize Kustomization.
+# =============================================================================
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# =============================================================================
+# Resources
+# Purpose: Defines the four files Kustomize applies together.
+# k8s-reference/base/kustomization.yaml includes this directory as "customers-service".
+# =============================================================================
+resources:
+  - deployment.yaml
+  - service.yaml
+  - configmap.yaml
+  - serviceaccount.yaml

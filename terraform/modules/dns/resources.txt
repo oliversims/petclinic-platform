@@ -1,0 +1,28 @@
+DNS module
+==========
+
+Role: public DNS, a wildcard TLS certificate, and (when install flags are
+on) the Ingress controllers. This module does not create the app ALB;
+the Load Balancer Controller creates it from the Ingress.
+
+
+What is created now (wave 1)
+
+  DNS and TLS
+  - Hosted zone lookup (or create when create_hosted_zone = true)
+  - ACM certificate for *.{domain} when create_acm_certificate = true
+  - Validation CNAME + waiter
+
+
+Held for the second apply
+
+  - IAM + Helm: aws-load-balancer-controller (install_lb_controller)
+  - IAM + Helm: external-dns (install_external_dns)
+  - Ops ALB SG when shared_alb is false (Grafana/Zipkin/Argo)
+    (operator applies k8s/argocd/ingress/{env}.yaml)
+
+
+How it is used
+
+  FQDN and CERT_ARN go into helm-values/{env}.yaml.
+  Controllers use the VPC ALB security group when Ingress syncs.

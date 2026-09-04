@@ -1,0 +1,11 @@
+# =============================================================================
+# k8s/argocd/install/argocd-cmd-params-cm-patch.yaml
+# Purpose: Serve plain HTTP behind the ALB (TLS terminates at the load balancer).
+# Without this, /healthz returns 307 and the target stays unhealthy.
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cmd-params-cm
+data:
+  server.insecure: "true"

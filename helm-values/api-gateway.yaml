@@ -1,0 +1,96 @@
+# =============================================================================
+# helm-values/api-gateway.yaml
+# Purpose: Routes all external traffic, so it gets more CPU and the widest autoscaling range.
+# Merged after the chart defaults and before helm-values/{env}.yaml.
+# image.registry and namespace come from the env file, not here.
+# =============================================================================
+
+# =============================================================================
+# Service name
+# Purpose: Helm release / Kubernetes object name for this service.
+# =============================================================================
+name: api-gateway
+
+# =============================================================================
+# Component label
+# Purpose: Value for app.kubernetes.io/component.
+# =============================================================================
+component: gateway
+
+# =============================================================================
+# Container image
+# Purpose: Image repository name and tag placeholder.
+# =============================================================================
+image:
+  name: api-gateway
+  tag: TAG
+
+# =============================================================================
+# Service port
+# Purpose: ClusterIP and container port for api-gateway.
+# =============================================================================
+service:
+  port: 8080
+
+# =============================================================================
+# Spring profiles
+# Purpose: Active Spring profiles for this service.
+# =============================================================================
+springProfiles: "docker"
+
+# =============================================================================
+# ConfigMap data
+# Purpose: Non-secret env keys including Zipkin tracing settings.
+# =============================================================================
+configData:
+  CONFIG_SERVER_URL: "http://config-server:8888"
+
+  MANAGEMENT_TRACING_EXPORT_ZIPKIN_ENDPOINT: "http://zipkin.tracing.svc:9411/api/v2/spans"
+  MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "1.0"
+
+# =============================================================================
+# Init containers
+# Purpose: Waits for Config Server and Discovery Server before starting.
+# =============================================================================
+initContainers:
+  - name: wait-for-config-server
+    image: busybox:1.36
+    command: ['sh', '-c', 'until wget -qO- http://config-server:8888/actuator/health; do sleep 5; done']
+  - name: wait-for-discovery-server
+    image: busybox:1.36
+    command: ['sh', '-c', 'until wget -qO- http://discovery-server:8761/actuator/health; do sleep 5; done']
+
+# =============================================================================
+# Resources
+# Purpose: Higher CPU for the gateway than domain services.
+# =============================================================================
+resources:
+  requests:
+    cpu: 200m
+    memory: 128Mi
+  limits:
+    cpu: 1000m
+    memory: 512Mi
+
+# =============================================================================
+# Horizontal Pod Autoscaler
+# Purpose: Enabled with a wider replica range for the gateway.
+# =============================================================================
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+
+# =============================================================================
+# Pod Disruption Budget
+# Purpose: Enabled so one gateway pod stays available.
+# =============================================================================
+podDisruptionBudget:
+  enabled: true
+
+# =============================================================================
+# Public ALB Ingress
+# Purpose: Enables the public Ingress for external traffic.
+# =============================================================================
+ingress:
+  enabled: true

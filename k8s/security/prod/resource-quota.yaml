@@ -1,0 +1,73 @@
+# =============================================================================
+# k8s/security/prod/resource-quota.yaml
+# Purpose: Caps what petclinic-prod can request, and gives unset pods sane defaults.
+# ResourceQuota is the ceiling; LimitRange sets container defaults.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a ResourceQuota.
+# =============================================================================
+apiVersion: v1
+kind: ResourceQuota
+
+# =============================================================================
+# ResourceQuota metadata
+# Purpose: Names the quota for the petclinic-prod namespace.
+# =============================================================================
+metadata:
+  name: petclinic-quota
+  namespace: petclinic-prod
+  labels:
+    app.kubernetes.io/part-of: petclinic
+
+# =============================================================================
+# ResourceQuota specification
+# Purpose: Hard limits for CPU requests, memory requests, and pod count.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Hard limits
+  # Purpose: Ceilings for the petclinic-prod namespace.
+  # =============================================================================
+  hard:
+    requests.cpu: "6"
+    requests.memory: 6Gi
+    pods: "50"
+---
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a LimitRange.
+# =============================================================================
+apiVersion: v1
+kind: LimitRange
+
+# =============================================================================
+# LimitRange metadata
+# Purpose: Names the default limits for the petclinic-prod namespace.
+# =============================================================================
+metadata:
+  name: petclinic-limits
+  namespace: petclinic-prod
+  labels:
+    app.kubernetes.io/part-of: petclinic
+
+# =============================================================================
+# LimitRange specification
+# Purpose: Default CPU and memory requests/limits for containers without them.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Container defaults
+  # Purpose: Applied when a container omits resources.
+  # =============================================================================
+  limits:
+    - type: Container
+      default:
+        cpu: 500m
+        memory: 512Mi
+      defaultRequest:
+        cpu: 100m
+        memory: 128Mi

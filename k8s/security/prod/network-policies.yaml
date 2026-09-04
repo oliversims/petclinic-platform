@@ -1,0 +1,476 @@
+# =============================================================================
+# k8s/security/prod/network-policies.yaml
+# Purpose: Default-deny ingress in petclinic-prod, then one allow per service.
+# ALB (VPC CIDR 10.1.0.0/16) -> api-gateway:8080
+# =============================================================================
+
+---
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a NetworkPolicy.
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+
+# =============================================================================
+# NetworkPolicy metadata
+# Purpose: Default-deny ingress for all pods in the namespace.
+# =============================================================================
+metadata:
+  name: default-deny-ingress
+  namespace: petclinic-prod
+  labels:
+    app.kubernetes.io/part-of: petclinic
+
+# =============================================================================
+# NetworkPolicy specification
+# Purpose: Selects all pods and denies ingress unless another policy allows it.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Pod selector
+  # Purpose: Empty selector matches every pod in the namespace.
+  # =============================================================================
+  podSelector:
+    {}
+
+  # =============================================================================
+  # Policy types
+  # Purpose: Applies to Ingress traffic only.
+  # =============================================================================
+  policyTypes:
+    - Ingress
+
+---
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a NetworkPolicy.
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+
+# =============================================================================
+# NetworkPolicy metadata
+# Purpose: Allows ingress to config-server on port 8888.
+# =============================================================================
+metadata:
+  name: allow-config-server
+  namespace: petclinic-prod
+  labels:
+    app.kubernetes.io/part-of: petclinic
+
+# =============================================================================
+# NetworkPolicy specification
+# Purpose: Restricts who may reach config-server Pods.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Pod selector
+  # Purpose: Selects Pods labeled app.kubernetes.io/name=config-server.
+  # =============================================================================
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: config-server
+
+  # =============================================================================
+  # Policy types
+  # Purpose: Applies to Ingress traffic only.
+  # =============================================================================
+  policyTypes:
+    - Ingress
+
+  # =============================================================================
+  # Ingress rules
+  # Purpose: Allowed sources and TCP port 8888.
+  # =============================================================================
+  ingress:
+    - from:
+        - podSelector: {}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8888
+
+---
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a NetworkPolicy.
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+
+# =============================================================================
+# NetworkPolicy metadata
+# Purpose: Allows ingress to discovery-server on port 8761.
+# =============================================================================
+metadata:
+  name: allow-discovery-server
+  namespace: petclinic-prod
+  labels:
+    app.kubernetes.io/part-of: petclinic
+
+# =============================================================================
+# NetworkPolicy specification
+# Purpose: Restricts who may reach discovery-server Pods.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Pod selector
+  # Purpose: Selects Pods labeled app.kubernetes.io/name=discovery-server.
+  # =============================================================================
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: discovery-server
+
+  # =============================================================================
+  # Policy types
+  # Purpose: Applies to Ingress traffic only.
+  # =============================================================================
+  policyTypes:
+    - Ingress
+
+  # =============================================================================
+  # Ingress rules
+  # Purpose: Allowed sources and TCP port 8761.
+  # =============================================================================
+  ingress:
+    - from:
+        - podSelector: {}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8761
+
+---
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a NetworkPolicy.
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+
+# =============================================================================
+# NetworkPolicy metadata
+# Purpose: Allows ingress to api-gateway on port 8080.
+# =============================================================================
+metadata:
+  name: allow-api-gateway
+  namespace: petclinic-prod
+  labels:
+    app.kubernetes.io/part-of: petclinic
+
+# =============================================================================
+# NetworkPolicy specification
+# Purpose: Restricts who may reach api-gateway Pods.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Pod selector
+  # Purpose: Selects Pods labeled app.kubernetes.io/name=api-gateway.
+  # =============================================================================
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: api-gateway
+
+  # =============================================================================
+  # Policy types
+  # Purpose: Applies to Ingress traffic only.
+  # =============================================================================
+  policyTypes:
+    - Ingress
+
+  # =============================================================================
+  # Ingress rules
+  # Purpose: Allowed sources and TCP port 8080.
+  # =============================================================================
+  ingress:
+    - from:
+        - ipBlock:
+            cidr: 10.1.0.0/16
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8080
+
+---
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a NetworkPolicy.
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+
+# =============================================================================
+# NetworkPolicy metadata
+# Purpose: Allows ingress to customers-service on port 8081.
+# =============================================================================
+metadata:
+  name: allow-customers-service
+  namespace: petclinic-prod
+  labels:
+    app.kubernetes.io/part-of: petclinic
+
+# =============================================================================
+# NetworkPolicy specification
+# Purpose: Restricts who may reach customers-service Pods.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Pod selector
+  # Purpose: Selects Pods labeled app.kubernetes.io/name=customers-service.
+  # =============================================================================
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: customers-service
+
+  # =============================================================================
+  # Policy types
+  # Purpose: Applies to Ingress traffic only.
+  # =============================================================================
+  policyTypes:
+    - Ingress
+
+  # =============================================================================
+  # Ingress rules
+  # Purpose: Allowed sources and TCP port 8081.
+  # =============================================================================
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: api-gateway
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8081
+
+---
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a NetworkPolicy.
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+
+# =============================================================================
+# NetworkPolicy metadata
+# Purpose: Allows ingress to visits-service on port 8082.
+# =============================================================================
+metadata:
+  name: allow-visits-service
+  namespace: petclinic-prod
+  labels:
+    app.kubernetes.io/part-of: petclinic
+
+# =============================================================================
+# NetworkPolicy specification
+# Purpose: Restricts who may reach visits-service Pods.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Pod selector
+  # Purpose: Selects Pods labeled app.kubernetes.io/name=visits-service.
+  # =============================================================================
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: visits-service
+
+  # =============================================================================
+  # Policy types
+  # Purpose: Applies to Ingress traffic only.
+  # =============================================================================
+  policyTypes:
+    - Ingress
+
+  # =============================================================================
+  # Ingress rules
+  # Purpose: Allowed sources and TCP port 8082.
+  # =============================================================================
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: api-gateway
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8082
+
+---
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a NetworkPolicy.
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+
+# =============================================================================
+# NetworkPolicy metadata
+# Purpose: Allows ingress to vets-service on port 8083.
+# =============================================================================
+metadata:
+  name: allow-vets-service
+  namespace: petclinic-prod
+  labels:
+    app.kubernetes.io/part-of: petclinic
+
+# =============================================================================
+# NetworkPolicy specification
+# Purpose: Restricts who may reach vets-service Pods.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Pod selector
+  # Purpose: Selects Pods labeled app.kubernetes.io/name=vets-service.
+  # =============================================================================
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: vets-service
+
+  # =============================================================================
+  # Policy types
+  # Purpose: Applies to Ingress traffic only.
+  # =============================================================================
+  policyTypes:
+    - Ingress
+
+  # =============================================================================
+  # Ingress rules
+  # Purpose: Allowed sources and TCP port 8083.
+  # =============================================================================
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: api-gateway
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8083
+
+---
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a NetworkPolicy.
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+
+# =============================================================================
+# NetworkPolicy metadata
+# Purpose: Allows ingress to genai-service on port 8084.
+# =============================================================================
+metadata:
+  name: allow-genai-service
+  namespace: petclinic-prod
+  labels:
+    app.kubernetes.io/part-of: petclinic
+
+# =============================================================================
+# NetworkPolicy specification
+# Purpose: Restricts who may reach genai-service Pods.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Pod selector
+  # Purpose: Selects Pods labeled app.kubernetes.io/name=genai-service.
+  # =============================================================================
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: genai-service
+
+  # =============================================================================
+  # Policy types
+  # Purpose: Applies to Ingress traffic only.
+  # =============================================================================
+  policyTypes:
+    - Ingress
+
+  # =============================================================================
+  # Ingress rules
+  # Purpose: Allowed sources and TCP port 8084.
+  # =============================================================================
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: api-gateway
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 8084
+
+---
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a NetworkPolicy.
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+
+# =============================================================================
+# NetworkPolicy metadata
+# Purpose: Allows ingress to admin-server on port 9090.
+# =============================================================================
+metadata:
+  name: allow-admin-server
+  namespace: petclinic-prod
+  labels:
+    app.kubernetes.io/part-of: petclinic
+
+# =============================================================================
+# NetworkPolicy specification
+# Purpose: Restricts who may reach admin-server Pods.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Pod selector
+  # Purpose: Selects Pods labeled app.kubernetes.io/name=admin-server.
+  # =============================================================================
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: admin-server
+
+  # =============================================================================
+  # Policy types
+  # Purpose: Applies to Ingress traffic only.
+  # =============================================================================
+  policyTypes:
+    - Ingress
+
+  # =============================================================================
+  # Ingress rules
+  # Purpose: Allowed sources and TCP port 9090.
+  # =============================================================================
+  ingress:
+    - from:
+        - podSelector: {}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: monitoring
+      ports:
+        - protocol: TCP
+          port: 9090

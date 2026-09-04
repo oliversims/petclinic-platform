@@ -1,0 +1,73 @@
+# =============================================================================
+# k8s/security/dev/resource-quota.yaml
+# Purpose: Caps what petclinic-dev can request, and gives unset pods sane defaults.
+# ResourceQuota is the ceiling; LimitRange sets container defaults.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a ResourceQuota.
+# =============================================================================
+apiVersion: v1
+kind: ResourceQuota
+
+# =============================================================================
+# ResourceQuota metadata
+# Purpose: Names the quota for the petclinic-dev namespace.
+# =============================================================================
+metadata:
+  name: petclinic-quota
+  namespace: petclinic-dev
+  labels:
+    app.kubernetes.io/part-of: petclinic
+
+# =============================================================================
+# ResourceQuota specification
+# Purpose: Hard limits for CPU requests, memory requests, and pod count.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Hard limits
+  # Purpose: Ceilings for the petclinic-dev namespace.
+  # =============================================================================
+  hard:
+    requests.cpu: "4"
+    requests.memory: 4Gi
+    pods: "40"
+---
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a LimitRange.
+# =============================================================================
+apiVersion: v1
+kind: LimitRange
+
+# =============================================================================
+# LimitRange metadata
+# Purpose: Names the default limits for the petclinic-dev namespace.
+# =============================================================================
+metadata:
+  name: petclinic-limits
+  namespace: petclinic-dev
+  labels:
+    app.kubernetes.io/part-of: petclinic
+
+# =============================================================================
+# LimitRange specification
+# Purpose: Default CPU and memory requests/limits for containers without them.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Container defaults
+  # Purpose: Applied when a container omits resources.
+  # =============================================================================
+  limits:
+    - type: Container
+      default:
+        cpu: 500m
+        memory: 512Mi
+      defaultRequest:
+        cpu: 100m
+        memory: 128Mi

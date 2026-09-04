@@ -1,0 +1,189 @@
+# =============================================================================
+# terraform/modules/observability/values/kube-prometheus-stack.yaml.tftpl
+# Purpose: Values for kube-prometheus-stack, rendered per environment.
+#
+# Sizes come from the spec's learning-size table: the cluster is two t4g.small,
+# so chart defaults (multi-GiB Prometheus) would never schedule.
+#
+# The Grafana admin password is NOT here — Terraform passes it separately as a
+# sensitive value so it never lands in a rendered file.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Prometheus
+# -----------------------------------------------------------------------------
+prometheus:
+  ingress:
+    enabled: false
+
+  prometheusSpec:
+    retention: ${retention}
+    scrapeInterval: 15s
+    evaluationInterval: 15s
+
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 512Mi
+
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: gp3
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: ${prometheus_pvc_size}
+
+    # Pick up PrometheusRules and ServiceMonitors regardless of the release
+    # label the chart would otherwise require.
+    ruleSelectorNilUsesHelmValues: false
+    serviceMonitorSelectorNilUsesHelmValues: false
+
+    # The apps live in another namespace and are scraped by DNS name, so these
+    # are plain static jobs rather than ServiceMonitors.
+    additionalScrapeConfigs:
+%{ for service, port in scrape_targets ~}
+      - job_name: ${service}
+        metrics_path: /actuator/prometheus
+        static_configs:
+          - targets: ["${service}.${app_namespace}.svc:${port}"]
+%{ endfor ~}
+
+# Alert rules from k8s/observability/prometheus-rules/.
+additionalPrometheusRulesMap:
+%{ for name, body in prometheus_rules ~}
+  ${name}:
+${indent(4, body)}
+%{ endfor ~}
+
+# -----------------------------------------------------------------------------
+# Grafana
+# -----------------------------------------------------------------------------
+grafana:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+  persistence:
+    enabled: true
+    storageClassName: gp3
+    size: 5Gi
+
+  # Grafana.ini root_url must match the public hostname or login redirects break.
+%{ if grafana_ingress_enabled ~}
+  grafana.ini:
+    server:
+      domain: ${grafana_host}
+      root_url: https://${grafana_host}
+
+  # Dedicated ALB (not the app's). TLS on the ALB; no in-cluster TLS secret.
+  ingress:
+    enabled: true
+    ingressClassName: alb
+    path: /
+    pathType: Prefix
+    hosts:
+      - ${grafana_host}
+    annotations:
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/certificate-arn: "${grafana_certificate_arn}"
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+      alb.ingress.kubernetes.io/ssl-redirect: "443"
+      alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-2-2021-06
+      alb.ingress.kubernetes.io/healthcheck-path: /api/health
+      alb.ingress.kubernetes.io/healthcheck-port: "3000"
+      alb.ingress.kubernetes.io/security-groups: "${grafana_alb_sg_id}"
+      alb.ingress.kubernetes.io/manage-backend-security-group-rules: "false"
+      alb.ingress.kubernetes.io/load-balancer-name: "${grafana_load_balancer_name}"
+%{ if grafana_alb_group_name != "" ~}
+      alb.ingress.kubernetes.io/group.name: "${grafana_alb_group_name}"
+%{ endif ~}
+%{ else ~}
+  ingress:
+    enabled: false
+%{ endif ~}
+
+  # Loki is a separate release; Prometheus is wired by the chart itself.
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      access: proxy
+      url: ${loki_url}
+      isDefault: false
+
+  # Watches for ConfigMaps labelled grafana_dashboard=1, which is how the
+  # dashboards in k8s/observability/grafana-dashboards/ get loaded.
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      searchNamespace: monitoring
+      folderAnnotation: grafana_folder
+      provider:
+        foldersFromFilesStructure: true
+
+# -----------------------------------------------------------------------------
+# Alertmanager
+# -----------------------------------------------------------------------------
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 20m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+
+  # Slack webhook comes from gitignored tfvars (never Git). Empty URL keeps
+  # the blackhole so a root without a webhook still plans.
+  config:
+    route:
+      group_by: ["alertname", "namespace"]
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 12h
+%{ if slack_enabled ~}
+      receiver: slack
+    receivers:
+      - name: slack
+        slack_configs:
+          - api_url: "${slack_webhook_url}"
+            channel: "${slack_channel}"
+            send_resolved: true
+            title: "{{ .CommonLabels.alertname }}"
+            text: "{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}"
+%{ else ~}
+      receiver: blackhole
+    receivers:
+      - name: blackhole
+%{ endif ~}
+
+  ingress:
+    enabled: false
+
+# -----------------------------------------------------------------------------
+# Metric sources
+# -----------------------------------------------------------------------------
+# Both are required: PodRestartLoop reads kube-state-metrics, HighMemoryUsage
+# reads container metrics.
+kubeStateMetrics:
+  enabled: true
+
+nodeExporter:
+  enabled: true
+
+prometheusOperator:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi

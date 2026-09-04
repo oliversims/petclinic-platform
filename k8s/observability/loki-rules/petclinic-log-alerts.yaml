@@ -1,0 +1,41 @@
+# =============================================================================
+# k8s/observability/loki-rules/petclinic-log-alerts.yaml
+# Purpose: Log-based alerts from the spec, evaluated by the Loki ruler.
+# This is a groups: fragment loaded into the Loki chart ruler config.
+# =============================================================================
+
+# =============================================================================
+# Loki ruler rule groups
+# Purpose: Defines log-based alerting rules for Petclinic namespaces.
+# =============================================================================
+groups:
+  - name: petclinic-logs
+    rules:
+
+      # =============================================================================
+      # LogErrorSpike alert
+      # Purpose: Fires when ERROR log rate stays elevated.
+      # =============================================================================
+      - alert: LogErrorSpike
+        expr: |
+          rate({namespace=~"petclinic-.*"} |= "ERROR" [5m]) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Elevated ERROR log rate in {{ $labels.namespace }}"
+          description: "More than 0.5 ERROR lines per second for 5 minutes."
+
+      # =============================================================================
+      # JVMOutOfMemory alert
+      # Purpose: A single OutOfMemoryError is worth waking someone for.
+      # =============================================================================
+      - alert: JVMOutOfMemory
+        expr: |
+          count_over_time({namespace=~"petclinic-.*"} |= "OutOfMemoryError" [5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "OutOfMemoryError in {{ $labels.namespace }}"
+          description: "A JVM logged OutOfMemoryError in the last 5 minutes."

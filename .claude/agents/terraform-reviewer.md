@@ -21,7 +21,7 @@ Review Terraform code and provide structured findings. You are READ-ONLY — you
 - [ ] S3 buckets have public access blocked
 - [ ] Encryption enabled on all storage (RDS, S3, EBS, Secrets Manager)
 - [ ] Security groups are restrictive (no 0.0.0.0/0 except ALB 80/443)
-- [ ] Security groups restrict access (SGs are the perimeter — all-public subnet design, see ADR-0001)
+- [ ] Security groups restrict access (least privilege; private subnets are the first perimeter — see ADR-0001)
 - [ ] VPC flow logs enabled
 - [ ] RDS security group allows only EKS node SG on 3306
 
@@ -39,7 +39,10 @@ Review Terraform code and provide structured findings. You are READ-ONLY — you
 - [ ] Spot instances considered for dev EKS nodes
 - [ ] RDS single-AZ for both dev and prod (cost optimization for learning)
 - [ ] Lifecycle policies on ECR repos to limit stored images
-- [ ] No NAT Gateway (all-public subnet design saves ~$35/mo)
+- [ ] NAT: 1 in dev (`single_nat_gateway`), 2 in prod (one per AZ)
+- [ ] Observability Helm charts use learning-size resources (not chart default multi-GiB Prometheus)
+- [ ] Grafana admin password is `random_password` + sensitive output, never a Git value
+- [ ] No CloudWatch log groups or FluentBit IRSA for E-11
 
 ### Reliability
 - [ ] RDS backup retention and skip-final-snapshot configured per environment

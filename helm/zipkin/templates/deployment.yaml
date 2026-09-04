@@ -1,0 +1,148 @@
+# =============================================================================
+# helm/zipkin/templates/deployment.yaml
+# Purpose: Zipkin collector and UI. Spans arrive from the five traced services.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a Deployment.
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+
+# =============================================================================
+# Deployment metadata
+# Purpose: Name, namespace, and labels from chart helpers.
+# =============================================================================
+metadata:
+  name: {{ include "zipkin.name" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "zipkin.labels" . | nindent 4 }}
+
+# =============================================================================
+# Deployment specification
+# Purpose: Replicas, selector, and Pod template.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Pod replicas
+  # Purpose: Number of Zipkin Pods to run.
+  # =============================================================================
+  replicas: {{ .Values.replicaCount }}
+
+  # =============================================================================
+  # Pod selector
+  # Purpose: Must match Pod template labels.
+  # =============================================================================
+  selector:
+    matchLabels:
+      {{- include "zipkin.selectorLabels" . | nindent 6 }}
+
+  # =============================================================================
+  # Pod template
+  # Purpose: Defines the structure of each new Pod.
+  # =============================================================================
+  template:
+
+    # =============================================================================
+    # Pod labels
+    # Purpose: Labels applied to every Zipkin Pod.
+    # =============================================================================
+    metadata:
+      labels:
+        {{- include "zipkin.labels" . | nindent 8 }}
+
+    # =============================================================================
+    # Pod specification
+    # Purpose: Security context, container, and emptyDir volume.
+    # =============================================================================
+    spec:
+
+      # =============================================================================
+      # Pod security context
+      # Purpose: Runs the Pod as a non-root Linux user.
+      # =============================================================================
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+
+      # =============================================================================
+      # Application containers
+      # Purpose: Defines the Zipkin container.
+      # =============================================================================
+      containers:
+        - name: zipkin
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          # =============================================================================
+          # Container port
+          # Purpose: HTTP port used by Zipkin.
+          # =============================================================================
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+
+          # =============================================================================
+          # Application environment variables
+          # Purpose: Sets STORAGE_TYPE for span storage.
+          # =============================================================================
+          env:
+            - name: STORAGE_TYPE
+              value: "{{ .Values.storageType }}"
+
+          # =============================================================================
+          # Container resources
+          # Purpose: CPU and memory requests/limits from values.
+          # =============================================================================
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+
+          # =============================================================================
+          # Readiness probe
+          # Purpose: Checks whether Zipkin is ready to receive traffic.
+          # =============================================================================
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.service.port }}
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          # =============================================================================
+          # Liveness probe
+          # Purpose: Checks whether Zipkin is still running correctly.
+          # =============================================================================
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.service.port }}
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          # =============================================================================
+          # Container security context
+          # Purpose: Prevents privilege escalation and drops capabilities.
+          # =============================================================================
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+
+          # =============================================================================
+          # Volume mounts
+          # Purpose: Mounts emptyDir at /zipkin/data.
+          # =============================================================================
+          volumeMounts:
+            - name: data
+              mountPath: /zipkin/data
+
+      # =============================================================================
+      # Volumes
+      # Purpose: In-memory emptyDir for Zipkin data.
+      # =============================================================================
+      volumes:
+        - name: data
+          emptyDir: {}

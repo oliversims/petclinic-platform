@@ -58,7 +58,7 @@ if echo "$COMMAND" | grep -qE 'git\s+(add|commit)'; then
       echo "Instead:"
       echo "  - Add the file to .gitignore"
       echo "  - Store secrets in AWS Secrets Manager"
-      echo "  - Use terraform.tfvars.example with placeholder values"
+      echo "  - Keep terraform.tfvars local (it is gitignored)"
       echo ""
       echo "If this is a false positive, run the git command directly in your terminal."
       exit 2

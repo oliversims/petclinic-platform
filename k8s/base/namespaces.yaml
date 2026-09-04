@@ -1,0 +1,46 @@
+# =============================================================================
+# k8s/base/namespaces.yaml
+# Purpose: One namespace per environment, with Pod Security Admission levels.
+# enforce=baseline blocks clearly unsafe pods; warn/audit=restricted report stricter failures.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a Namespace.
+# =============================================================================
+apiVersion: v1
+kind: Namespace
+
+# =============================================================================
+# Dev namespace metadata
+# Purpose: Creates petclinic-dev with PSA labels.
+# =============================================================================
+metadata:
+  name: petclinic-dev
+  labels:
+    app.kubernetes.io/part-of: petclinic
+    environment: dev
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted
+
+---
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a Namespace.
+# =============================================================================
+apiVersion: v1
+kind: Namespace
+
+# =============================================================================
+# Prod namespace metadata
+# Purpose: Creates petclinic-prod with PSA labels.
+# =============================================================================
+metadata:
+  name: petclinic-prod
+  labels:
+    app.kubernetes.io/part-of: petclinic
+    environment: prod
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/audit: restricted

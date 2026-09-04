@@ -1,0 +1,59 @@
+# =============================================================================
+# k8s-reference/base/config-server/service.yaml
+# Purpose: ClusterIP on 8888, reachable in-cluster as http://config-server:8888.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a Service.
+# =============================================================================
+apiVersion: v1
+kind: Service
+
+# =============================================================================
+# Service metadata
+# Purpose: Defines the Service name, namespace, and identifying labels.
+# The name is the DNS name other Pods use: http://config-server:8888.
+# It must match metadata.name on the Deployment and ServiceAccount.
+# =============================================================================
+metadata:
+  name: config-server
+  namespace: petclinic-dev
+  labels:
+    app.kubernetes.io/name: config-server
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: server
+
+# =============================================================================
+# Service specification
+# Purpose: Defines how traffic reaches the config-server Pods.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Service type
+  # Purpose: ClusterIP only; not reachable from the internet.
+  # External traffic enters through the api-gateway Ingress / ALB instead.
+  # =============================================================================
+  type: ClusterIP
+
+  # =============================================================================
+  # Pod selector
+  # Purpose: Identifies the Pods that receive traffic.
+  # Must match the Deployment selector and Pod template labels.
+  # =============================================================================
+  selector:
+    app.kubernetes.io/name: config-server
+
+  # =============================================================================
+  # Service ports
+  # Purpose: Forwards Service port 8888 to containerPort 8888.
+  # That targetPort must match the Deployment containerPort 8888.
+  # Other services wait on this name and port in initContainers and CONFIG_SERVER_URL.
+  # =============================================================================
+  ports:
+    - name: http
+      port: 8888
+      targetPort: 8888
+      protocol: TCP

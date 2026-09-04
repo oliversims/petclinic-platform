@@ -1,0 +1,73 @@
+# =============================================================================
+# k8s/karpenter/dev/nodepool.yaml
+# Purpose: What Karpenter may launch in dev, and when it removes it.
+# Pending pod -> NodePool requirements -> EC2NodeClass.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this resource as a Karpenter NodePool.
+# =============================================================================
+apiVersion: karpenter.sh/v1
+kind: NodePool
+
+# =============================================================================
+# NodePool metadata
+# Purpose: Names the default NodePool and applies environment labels.
+# =============================================================================
+metadata:
+  name: default
+  labels:
+    app.kubernetes.io/part-of: petclinic
+    environment: dev
+
+# =============================================================================
+# NodePool specification
+# Purpose: Node requirements, class link, capacity limits, and disruption policy.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Node template
+  # Purpose: Requirements for architecture, OS, capacity type, and instance types.
+  # =============================================================================
+  template:
+    spec:
+      requirements:
+        - key: kubernetes.io/arch
+          operator: In
+          values: ["arm64"]
+        - key: kubernetes.io/os
+          operator: In
+          values: ["linux"]
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: ["on-demand"]
+        - key: node.kubernetes.io/instance-type
+          operator: In
+          values: ["t4g.small", "t4g.medium"]
+
+      # =============================================================================
+      # Node class reference
+      # Purpose: Links to the EC2NodeClass that builds the node.
+      # =============================================================================
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: default
+
+  # =============================================================================
+  # Capacity limits
+  # Purpose: Ceiling for Karpenter-managed CPU and memory.
+  # =============================================================================
+  limits:
+    cpu: "8"
+    memory: 16Gi
+
+  # =============================================================================
+  # Disruption policy
+  # Purpose: When Karpenter may remove nodes it created.
+  # =============================================================================
+  disruption:
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 5m

@@ -30,7 +30,7 @@ NEVER run mutating commands (apply, destroy, delete, etc.).
 - Look for base64-encoded secrets in K8s manifests
 
 ### 2. Network Security
-- VPC: all-public subnet design (cost optimization for learning — see ADR-0001)
+- VPC: public (ALB, NAT) + private (EKS, RDS); 1 NAT in dev, 2 in prod (see ADR-0001)
 - Security groups are the primary perimeter — must be restrictive
 - Security groups: no unrestricted ingress (0.0.0.0/0) except ALB 80/443
 - RDS SG: only allows 3306 from EKS node SG (not 0.0.0.0/0)

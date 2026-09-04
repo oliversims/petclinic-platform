@@ -1,0 +1,262 @@
+# =============================================================================
+# k8s-reference/overlays/prod/pdb.yaml
+# Purpose: Keep one pod serving during voluntary disruptions (PETPLAT-88).
+#
+# Covers the six services that run 2 replicas in prod. genai-service and
+# admin-server run a single replica, where minAvailable: 1 would block node
+# drains outright, so they are deliberately omitted.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type — config-server
+# Purpose: Defines a PodDisruptionBudget included by k8s-reference/overlays/prod/kustomization.yaml.
+# Helm equivalent: helm-values/<service>.yaml podDisruptionBudget (prod only).
+# =============================================================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+
+# =============================================================================
+# Metadata: identity and labels — config-server
+# Purpose: Defines this PDB's name. Namespace comes from the overlay
+# (petclinic-prod). Labels match k8s-reference/base/config-server/deployment.yaml.
+# =============================================================================
+metadata:
+  name: config-server
+  labels:
+    app.kubernetes.io/name: config-server
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: server
+
+# =============================================================================
+# PDB specification — config-server
+# Purpose: Defines how Kubernetes should protect config-server Pods during drains.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Minimum Pods that must stay up
+  # Purpose: Defines that Kubernetes must leave at least one config-server Pod
+  # running during a drain or upgrade.
+  # =============================================================================
+  minAvailable: 1
+
+  # =============================================================================
+  # Selector: identifies the Pods this PDB protects
+  # Purpose: Defines which Pods this PDB covers. The label must match
+  # spec.template.metadata.labels in k8s-reference/base/config-server/deployment.yaml
+  # and the replica name in k8s-reference/overlays/prod/kustomization.yaml (count: 2).
+  # =============================================================================
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: config-server
+---
+# =============================================================================
+# Kubernetes API and resource type — discovery-server
+# Purpose: Defines a PodDisruptionBudget for discovery-server, included by
+# k8s-reference/overlays/prod/kustomization.yaml.
+# =============================================================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+
+# =============================================================================
+# Metadata: identity and labels — discovery-server
+# Purpose: Defines this PDB's name. Labels match k8s-reference/base/discovery-server/deployment.yaml.
+# =============================================================================
+metadata:
+  name: discovery-server
+  labels:
+    app.kubernetes.io/name: discovery-server
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: server
+
+# =============================================================================
+# PDB specification — discovery-server
+# Purpose: Defines how Kubernetes should protect discovery-server Pods during drains.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Minimum Pods that must stay up
+  # Purpose: Defines that at least one discovery-server Pod stays up during a drain.
+  # =============================================================================
+  minAvailable: 1
+
+  # =============================================================================
+  # Selector: identifies the Pods this PDB protects
+  # Purpose: Defines which Pods this PDB covers. Must match the Deployment selector
+  # in k8s-reference/base/discovery-server/deployment.yaml.
+  # =============================================================================
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: discovery-server
+---
+# =============================================================================
+# Kubernetes API and resource type — api-gateway
+# Purpose: Defines a PodDisruptionBudget for api-gateway, included by
+# k8s-reference/overlays/prod/kustomization.yaml.
+# =============================================================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+
+# =============================================================================
+# Metadata: identity and labels — api-gateway
+# Purpose: Defines this PDB's name. Labels match k8s-reference/base/api-gateway/deployment.yaml.
+# =============================================================================
+metadata:
+  name: api-gateway
+  labels:
+    app.kubernetes.io/name: api-gateway
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: gateway
+
+# =============================================================================
+# PDB specification — api-gateway
+# Purpose: Defines how Kubernetes should protect api-gateway Pods during drains.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Minimum Pods that must stay up
+  # Purpose: Defines that at least one api-gateway Pod stays up during a drain.
+  # The ALB in helm-values/prod.yaml targets these Pods.
+  # =============================================================================
+  minAvailable: 1
+
+  # =============================================================================
+  # Selector: identifies the Pods this PDB protects
+  # Purpose: Defines which Pods this PDB covers. Must match the Deployment selector
+  # in k8s-reference/base/api-gateway/deployment.yaml. An HPA for the same Deployment
+  # lives in k8s-reference/overlays/prod/hpa.yaml.
+  # =============================================================================
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: api-gateway
+---
+# =============================================================================
+# Kubernetes API and resource type — customers-service
+# Purpose: Defines a PodDisruptionBudget for customers-service, included by
+# k8s-reference/overlays/prod/kustomization.yaml.
+# =============================================================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+
+# =============================================================================
+# Metadata: identity and labels — customers-service
+# Purpose: Defines this PDB's name. Labels match k8s-reference/base/customers-service/deployment.yaml.
+# =============================================================================
+metadata:
+  name: customers-service
+  labels:
+    app.kubernetes.io/name: customers-service
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: service
+
+# =============================================================================
+# PDB specification — customers-service
+# Purpose: Defines how Kubernetes should protect customers-service Pods during drains.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Minimum Pods that must stay up
+  # Purpose: Defines that at least one customers-service Pod stays up during a drain.
+  # =============================================================================
+  minAvailable: 1
+
+  # =============================================================================
+  # Selector: identifies the Pods this PDB protects
+  # Purpose: Defines which Pods this PDB covers. Must match the Deployment selector
+  # in k8s-reference/base/customers-service/deployment.yaml. An HPA for the same
+  # Deployment lives in k8s-reference/overlays/prod/hpa.yaml.
+  # =============================================================================
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: customers-service
+---
+# =============================================================================
+# Kubernetes API and resource type — visits-service
+# Purpose: Defines a PodDisruptionBudget for visits-service, included by
+# k8s-reference/overlays/prod/kustomization.yaml.
+# =============================================================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+
+# =============================================================================
+# Metadata: identity and labels — visits-service
+# Purpose: Defines this PDB's name. Labels match k8s-reference/base/visits-service/deployment.yaml.
+# =============================================================================
+metadata:
+  name: visits-service
+  labels:
+    app.kubernetes.io/name: visits-service
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: service
+
+# =============================================================================
+# PDB specification — visits-service
+# Purpose: Defines how Kubernetes should protect visits-service Pods during drains.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Minimum Pods that must stay up
+  # Purpose: Defines that at least one visits-service Pod stays up during a drain.
+  # =============================================================================
+  minAvailable: 1
+
+  # =============================================================================
+  # Selector: identifies the Pods this PDB protects
+  # Purpose: Defines which Pods this PDB covers. Must match the Deployment selector
+  # in k8s-reference/base/visits-service/deployment.yaml. An HPA for the same
+  # Deployment lives in k8s-reference/overlays/prod/hpa.yaml.
+  # =============================================================================
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: visits-service
+---
+# =============================================================================
+# Kubernetes API and resource type — vets-service
+# Purpose: Defines a PodDisruptionBudget for vets-service, included by
+# k8s-reference/overlays/prod/kustomization.yaml.
+# =============================================================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+
+# =============================================================================
+# Metadata: identity and labels — vets-service
+# Purpose: Defines this PDB's name. Labels match k8s-reference/base/vets-service/deployment.yaml.
+# =============================================================================
+metadata:
+  name: vets-service
+  labels:
+    app.kubernetes.io/name: vets-service
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: service
+
+# =============================================================================
+# PDB specification — vets-service
+# Purpose: Defines how Kubernetes should protect vets-service Pods during drains.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Minimum Pods that must stay up
+  # Purpose: Defines that at least one vets-service Pod stays up during a drain.
+  # =============================================================================
+  minAvailable: 1
+
+  # =============================================================================
+  # Selector: identifies the Pods this PDB protects
+  # Purpose: Defines which Pods this PDB covers. Must match the Deployment selector
+  # in k8s-reference/base/vets-service/deployment.yaml. An HPA for the same
+  # Deployment lives in k8s-reference/overlays/prod/hpa.yaml.
+  # =============================================================================
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vets-service

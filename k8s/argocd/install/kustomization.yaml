@@ -1,0 +1,33 @@
+# =============================================================================
+# k8s/argocd/install/kustomization.yaml
+# Purpose: Pinned, non-HA Argo CD install.
+# The upstream manifest is referenced at a tag, never vendored.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this file as a Kustomization.
+# =============================================================================
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# =============================================================================
+# Target namespace
+# Purpose: Places all Argo CD resources in the argocd namespace.
+# =============================================================================
+namespace: argocd
+
+# =============================================================================
+# Resources list
+# Purpose: Local namespace plus pinned upstream Argo CD install manifest.
+# =============================================================================
+resources:
+  - namespace.yaml
+  - https://raw.githubusercontent.com/argoproj/argo-cd/v3.5.2/manifests/install.yaml
+
+# =============================================================================
+# Patches
+# Purpose: ALB terminates TLS; argocd-server must speak HTTP on :8080.
+# =============================================================================
+patches:
+  - path: argocd-cmd-params-cm-patch.yaml

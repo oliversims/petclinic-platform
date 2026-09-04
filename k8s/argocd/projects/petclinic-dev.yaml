@@ -1,0 +1,62 @@
+# =============================================================================
+# k8s/argocd/projects/petclinic-dev.yaml
+# Purpose: Confine the dev Applications to one namespace on this cluster.
+# Argo CD refuses to sync destinations that are not listed here.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this resource as an Argo CD AppProject.
+# =============================================================================
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+
+# =============================================================================
+# AppProject metadata
+# Purpose: Names the petclinic-dev project in the argocd namespace.
+# =============================================================================
+metadata:
+  name: petclinic-dev
+  namespace: argocd
+  labels:
+    environment: dev
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: argocd
+
+# =============================================================================
+# AppProject specification
+# Purpose: Restricts sources, destinations, and allowed resource kinds for dev.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Description
+  # Purpose: Human-readable description of the dev project.
+  # =============================================================================
+  description: Petclinic dev services
+
+  # =============================================================================
+  # Source repositories
+  # Purpose: Only this repo may be a source.
+  # =============================================================================
+  sourceRepos:
+    - https://github.com/oliversims/petclinic-platform.git
+
+  # =============================================================================
+  # Destinations
+  # Purpose: In-cluster, only the petclinic-dev namespace.
+  # =============================================================================
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: petclinic-dev
+
+  # =============================================================================
+  # Resource whitelist
+  # Purpose: Allows Namespace cluster resources and all namespaced kinds.
+  # =============================================================================
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+  namespaceResourceWhitelist:
+    - group: "*"
+      kind: "*"

@@ -1,0 +1,80 @@
+# =============================================================================
+# .checkov.yml
+# Purpose: Checkov config for Terraform (used by CI and /security-scan).
+# Spec: docs/technical-spec.md
+# =============================================================================
+
+# =============================================================================
+# Scan scope
+# Purpose: Defines which files Checkov inspects.
+# =============================================================================
+directory:
+  - terraform
+
+framework:
+  - terraform
+
+# =============================================================================
+# Skipped paths
+# Purpose: Vendored upstream IAM JSON (AWS / Karpenter), not our code.
+# =============================================================================
+skip-path:
+  - terraform/modules/dns/iam
+  - terraform/modules/karpenter/iam
+
+# =============================================================================
+# Output options
+# Purpose: Quieter, compact CLI results.
+# =============================================================================
+quiet: true
+compact: true
+
+# =============================================================================
+# Skipped checks
+# Purpose: Intentional platform choices (see technical-spec.md).
+# Soft-fail is false in CI - do not add a skip without a documented reason.
+# =============================================================================
+skip-check:
+
+  # =============================================================================
+  # Network skips
+  # Purpose: Public ALB 80/443 and open egress for nodes / control plane.
+  # =============================================================================
+  - CKV_AWS_260
+  - CKV_AWS_382
+
+  # =============================================================================
+  # EKS skips
+  # Purpose: Public API endpoint stays enabled (CIDR lock via CKV_AWS_38, not skipped).
+  # =============================================================================
+  - CKV_AWS_39
+
+  # =============================================================================
+  # IAM skips
+  # Purpose: Wildcards required by ECR auth token and AWS managed EKS policies.
+  # =============================================================================
+  - CKV_AWS_355
+  - CKV_AWS_356
+  - CKV_AWS_111
+  - CKV_AWS_290
+  - CKV_AWS_286
+
+  # =============================================================================
+  # ECR skips
+  # Purpose: Mutable tags in dev; default AES256 encryption (not a CMK).
+  # =============================================================================
+  - CKV_AWS_51
+  - CKV_AWS_136
+
+  # =============================================================================
+  # RDS skips
+  # Purpose: Learning-size settings (single-AZ, cost, ADR-0006).
+  # =============================================================================
+  - CKV_AWS_157
+  - CKV_AWS_293
+  - CKV_AWS_226
+  - CKV_AWS_129
+  - CKV_AWS_118
+  - CKV_AWS_353
+  - CKV_AWS_161
+  - CKV2_AWS_60

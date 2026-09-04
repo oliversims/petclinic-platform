@@ -1,0 +1,44 @@
+# =============================================================================
+# helm/petclinic-service/templates/pdb.yaml
+# Purpose: PodDisruptionBudget, rendered when podDisruptionBudget.enabled is true.
+# =============================================================================
+
+{{- if .Values.podDisruptionBudget.enabled }}
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a PodDisruptionBudget.
+# =============================================================================
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+
+# =============================================================================
+# PDB metadata
+# Purpose: Name, namespace, and labels from chart helpers.
+# =============================================================================
+metadata:
+  name: {{ include "petclinic-service.name" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "petclinic-service.labels" . | nindent 4 }}
+
+# =============================================================================
+# PDB specification
+# Purpose: Minimum available pods and selector.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Minimum available
+  # Purpose: Keeps at least this many pods during voluntary disruptions.
+  # =============================================================================
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+
+  # =============================================================================
+  # Pod selector
+  # Purpose: Must match Deployment Pod template labels.
+  # =============================================================================
+  selector:
+    matchLabels:
+      {{- include "petclinic-service.selectorLabels" . | nindent 6 }}
+{{- end }}

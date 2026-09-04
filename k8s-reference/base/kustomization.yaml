@@ -1,0 +1,28 @@
+# =============================================================================
+# k8s-reference/base/kustomization.yaml
+# Purpose: Pre-Helm workload list (reference only). Overlays set namespace/prefix.
+#
+# Live deploy uses Helm + Argo CD. Do not apply this for the current path.
+# Optional dry build: kubectl kustomize k8s-reference/overlays/dev
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this resource as a Kustomize Kustomization.
+# =============================================================================
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# =============================================================================
+# Resources
+# Purpose: Eight service directories only. Live ExternalSecrets stay in k8s/base/.
+# =============================================================================
+resources:
+  - config-server
+  - discovery-server
+  - api-gateway
+  - customers-service
+  - visits-service
+  - vets-service
+  - genai-service
+  - admin-server

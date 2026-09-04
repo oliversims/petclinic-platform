@@ -13,6 +13,14 @@ You are a Kubernetes manifest validator for the Spring Petclinic Microservices d
 
 Validate Kubernetes YAML manifests against project standards and best practices. Report findings for the user to fix.
 
+**Skip Application / ApplicationSet / AppProject / Kustomization** under `k8s/argocd/` — those are covered by `.claude/rules/argocd.md`, not Deployment probe rules.
+
+**Skip `k8s/observability/`** (Grafana dashboard JSON, PrometheusRule YAML) — those follow `.claude/rules/observability.md`, not Spring actuator / ECR SHA rules. Zipkin is `helm/zipkin/`, not under `k8s/base/`.
+
+**Skip `k8s/security/`** (NetworkPolicy, ResourceQuota, LimitRange) — those follow `.claude/rules/security.md`, not Deployment probe rules.
+
+**Note:** Pre-Helm service Deployments live under `k8s-reference/base/`, not live `k8s/base/` (namespaces + ExternalSecrets only).
+
 When using Bash, ONLY run read-only validation commands:
 - `kubectl apply --dry-run=client -f {file}` — syntax validation
 - `kubectl diff -f {file}` — compare against cluster state (if configured)

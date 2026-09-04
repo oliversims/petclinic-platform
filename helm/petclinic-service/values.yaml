@@ -1,0 +1,169 @@
+# =============================================================================
+# helm/petclinic-service/values.yaml
+# Purpose: Chart defaults. Lowest precedence in the merge.
+# Merge order (last wins): this file, helm-values/{{service}}.yaml, helm-values/{{env}}.yaml
+# =============================================================================
+
+# =============================================================================
+# Service identity
+# Purpose: Default name and component label; overridden per service.
+# =============================================================================
+name: ""
+component: service
+
+# =============================================================================
+# Replicas
+# Purpose: Default replica count and optional per-service overrides map.
+# =============================================================================
+replicaCount: 1
+replicaOverrides: {}
+
+# =============================================================================
+# Container image
+# Purpose: Registry, name, tag, and pull policy defaults.
+# =============================================================================
+image:
+  registry: ""
+  name: ""
+  tag: TAG
+  pullPolicy: IfNotPresent
+
+# =============================================================================
+# ClusterIP Service defaults
+# Purpose: Service type and port defaults.
+# =============================================================================
+service:
+  type: ClusterIP
+  port: 8080
+
+# =============================================================================
+# ServiceAccount
+# Purpose: Whether to create a ServiceAccount and optional annotations.
+# =============================================================================
+serviceAccount:
+  create: true
+  annotations: {}
+
+# =============================================================================
+# Spring profiles
+# Purpose: Default active Spring profiles.
+# =============================================================================
+springProfiles: docker
+
+# =============================================================================
+# ConfigMap data
+# Purpose: Extra non-secret key/value pairs for the ConfigMap.
+# =============================================================================
+configData: {}
+
+# =============================================================================
+# Extra plain environment variables
+# Purpose: Additional env entries merged into the container.
+# =============================================================================
+env: []
+
+# =============================================================================
+# Secret-backed environment variables
+# Purpose: Maps Secret keys into container env vars.
+# =============================================================================
+secrets: []
+
+# =============================================================================
+# Init containers
+# Purpose: Optional init containers that wait on dependencies.
+# =============================================================================
+initContainers: []
+
+# =============================================================================
+# Resources
+# Purpose: Default CPU and memory requests/limits.
+# =============================================================================
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# =============================================================================
+# Health probes
+# Purpose: Startup, readiness, and liveness probe defaults.
+# =============================================================================
+probes:
+  startup:
+    path: /actuator/health
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 30
+  readiness:
+    path: /actuator/health/readiness
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+  liveness:
+    path: /actuator/health/liveness
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# =============================================================================
+# Horizontal Pod Autoscaler
+# Purpose: Default HPA settings; disabled until a values file enables it.
+# =============================================================================
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 70
+
+# =============================================================================
+# Pod Disruption Budget
+# Purpose: Default PDB settings; disabled until a values file enables it.
+# =============================================================================
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
+
+# =============================================================================
+# Public ALB Ingress
+# Purpose: Default Ingress settings; disabled unless a service enables it.
+# =============================================================================
+ingress:
+  enabled: false
+  className: alb
+  host: ""
+  certificateArn: ""
+  albSecurityGroupId: ""
+  loadBalancerName: ""
+  groupName: ""
+
+# =============================================================================
+# Pod securityContext
+# Purpose: Runs the Pod as a non-root Linux user.
+# =============================================================================
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+# =============================================================================
+# Topology spread
+# Purpose: Spreads Pods across availability zones when replicas > 1.
+# labelSelector is set by the chart from the service name.
+# =============================================================================
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
+
+# =============================================================================
+# Container securityContext
+# Purpose: Prevents privilege escalation and drops Linux capabilities.
+# =============================================================================
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false

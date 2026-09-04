@@ -1,0 +1,98 @@
+# =============================================================================
+# terraform/modules/observability/values/loki.yaml.tftpl
+# Purpose: Loki values, rendered per environment.
+#
+# SingleBinary with a filesystem PVC: no MinIO, no S3, no IRSA. Retention and
+# disk differ per environment; everything else is identical.
+# =============================================================================
+
+deploymentMode: SingleBinary
+
+loki:
+  auth_enabled: false
+
+  commonConfig:
+    replication_factor: 1
+
+  # Local disk, not object storage.
+  storage:
+    type: filesystem
+
+  schemaConfig:
+    configs:
+      - from: "2024-04-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: index_
+          period: 24h
+
+  limits_config:
+    retention_period: ${retention_hours}
+    reject_old_samples: true
+    reject_old_samples_max_age: 168h
+
+  # Deletes chunks past the retention window; without this the PVC just fills.
+  compactor:
+    retention_enabled: true
+    delete_request_store: filesystem
+
+  # Best-effort on SingleBinary: no object store backs the ruler's state.
+  rulerConfig:
+    alertmanager_url: http://kube-prometheus-stack-alertmanager.monitoring.svc:9093
+    storage:
+      type: local
+      local:
+        directory: /rules
+
+singleBinary:
+  replicas: 1
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+  persistence:
+    enabled: true
+    storageClass: gp3
+    size: ${pvc_size}
+
+  # Log alert rules from k8s/observability/loki-rules/.
+  extraVolumes:
+    - name: loki-rules
+      configMap:
+        name: loki-alerting-rules
+        optional: true
+  extraVolumeMounts:
+    - name: loki-rules
+      mountPath: /rules/fake
+
+# Everything below is the scale-out topology, which SingleBinary does not use.
+backend:
+  replicas: 0
+read:
+  replicas: 0
+write:
+  replicas: 0
+
+# No object storage, so no bundled MinIO either.
+minio:
+  enabled: false
+
+chunksCache:
+  enabled: false
+resultsCache:
+  enabled: false
+
+# Reached in-cluster only; Grafana proxies queries.
+gateway:
+  enabled: false
+
+test:
+  enabled: false
+lokiCanary:
+  enabled: false

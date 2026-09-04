@@ -1,0 +1,89 @@
+# =============================================================================
+# helm-values/customers-service.yaml
+# Purpose: Owners and pets, backed by the shared petclinic database.
+# Merged after the chart defaults and before helm-values/{env}.yaml.
+# image.registry and namespace come from the env file, not here.
+# =============================================================================
+
+# =============================================================================
+# Service name
+# Purpose: Helm release / Kubernetes object name for this service.
+# =============================================================================
+name: customers-service
+
+# =============================================================================
+# Component label
+# Purpose: Value for app.kubernetes.io/component.
+# =============================================================================
+component: service
+
+# =============================================================================
+# Container image
+# Purpose: Image repository name and tag placeholder.
+# =============================================================================
+image:
+  name: customers-service
+  tag: TAG
+
+# =============================================================================
+# Service port
+# Purpose: ClusterIP and container port for customers-service.
+# =============================================================================
+service:
+  port: 8081
+
+# =============================================================================
+# Spring profiles
+# Purpose: Active Spring profiles including MySQL.
+# =============================================================================
+springProfiles: "docker,mysql"
+
+# =============================================================================
+# ConfigMap data
+# Purpose: Non-secret env keys including JDBC URL and Zipkin tracing.
+# =============================================================================
+configData:
+  CONFIG_SERVER_URL: "http://config-server:8888"
+  SPRING_DATASOURCE_URL: "jdbc:mysql://{rds-endpoint}:3306/petclinic"
+
+  MANAGEMENT_TRACING_EXPORT_ZIPKIN_ENDPOINT: "http://zipkin.tracing.svc:9411/api/v2/spans"
+  MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "1.0"
+
+# =============================================================================
+# Secret-backed environment variables
+# Purpose: RDS username/password from the ESO-synced Secret.
+# Secret name and keys must match the ExternalSecret target.
+# =============================================================================
+secrets:
+  - name: SPRING_DATASOURCE_USERNAME
+    secretName: rds-credentials
+    key: username
+  - name: SPRING_DATASOURCE_PASSWORD
+    secretName: rds-credentials
+    key: password
+
+# =============================================================================
+# Init containers
+# Purpose: Waits for Config Server and Discovery Server before starting.
+# =============================================================================
+initContainers:
+  - name: wait-for-config-server
+    image: busybox:1.36
+    command: ['sh', '-c', 'until wget -qO- http://config-server:8888/actuator/health; do sleep 5; done']
+  - name: wait-for-discovery-server
+    image: busybox:1.36
+    command: ['sh', '-c', 'until wget -qO- http://discovery-server:8761/actuator/health; do sleep 5; done']
+
+# =============================================================================
+# Horizontal Pod Autoscaler
+# Purpose: Enabled for customers-service.
+# =============================================================================
+autoscaling:
+  enabled: true
+
+# =============================================================================
+# Pod Disruption Budget
+# Purpose: Enabled so one customers-service pod stays available.
+# =============================================================================
+podDisruptionBudget:
+  enabled: true

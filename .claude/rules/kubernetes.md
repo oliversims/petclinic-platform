@@ -1,7 +1,9 @@
 ---
 paths:
-  - "k8s/**/*.yaml"
-  - "k8s/**/*.yml"
+  - "k8s/base/**/*.yaml"
+  - "k8s/base/**/*.yml"
+  - "k8s-reference/**/*.yaml"
+  - "k8s-reference/**/*.yml"
 ---
 
 # Kubernetes Rules
@@ -9,19 +11,21 @@ paths:
 ## Directory Structure
 
 ```
-k8s/
-├── base/                     # Shared manifests (all environments)
-│   ├── namespaces.yaml       # Namespace definitions
-│   ├── {service-name}/       # One directory per service
-│   │   ├── deployment.yaml
-│   │   ├── service.yaml
-│   │   └── configmap.yaml    # If needed
-│   ├── ingress/              # ALB Ingress Controller
-│   └── external-secrets/     # ExternalSecret CRs
-└── overlays/
-    ├── dev/                  # Dev patches: 1 replica, smaller resources
-    └── prod/                 # Prod patches: 2+ replicas, HPA, larger resources
+k8s/                          # Live manifests only
+├── base/
+│   ├── namespaces.yaml
+│   └── external-secrets/
+├── observability/
+├── security/
+├── karpenter/
+└── argocd/
+
+k8s-reference/                # Pre-Helm plain YAML (do not apply for live path)
+├── base/{8 services}/
+└── overlays/{dev,prod}/
 ```
+
+Ingress for the API Gateway is Helm (`helm/petclinic-service/templates/ingress.yaml`), not `k8s/base/ingress/`. ArgoCD GitOps YAML lives in `k8s/argocd/` and follows `.claude/rules/argocd.md`. DNS/ACM/controllers follow `.claude/rules/dns.md`. Dashboards and PrometheusRules live in `k8s/observability/` and follow `.claude/rules/observability.md`. NetworkPolicies and quotas live in `k8s/security/` and follow `.claude/rules/security.md` — do not treat them as app Deployments (no actuator probes, no ECR SHA tags).
 
 ## Required Labels
 
@@ -69,7 +73,7 @@ Every Deployment MUST include:
 
 3. **Image with SHA tag** (never `latest`):
    ```yaml
-   image: {account}.dkr.ecr.eu-central-1.amazonaws.com/petclinic/{service}:{sha}
+   image: {account}.dkr.ecr.us-east-1.amazonaws.com/petclinic/{service}:{sha}
    ```
 
 ## Service Startup Order

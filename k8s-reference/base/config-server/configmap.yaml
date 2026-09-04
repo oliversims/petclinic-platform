@@ -1,0 +1,35 @@
+# =============================================================================
+# k8s-reference/base/config-server/configmap.yaml
+# Purpose: Non-secret settings. Secret values arrive from ESO-synced Secrets.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a ConfigMap.
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+
+# =============================================================================
+# ConfigMap metadata
+# Purpose: Defines the ConfigMap name, namespace, and identifying labels.
+# The Deployment envFrom.configMapRef.name must be exactly config-server-config.
+# =============================================================================
+metadata:
+  name: config-server-config
+  namespace: petclinic-dev
+  labels:
+    app.kubernetes.io/name: config-server
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: server
+
+# =============================================================================
+# ConfigMap data
+# Purpose: Non-secret environment variables injected into the container.
+# SERVER_PORT must match the Deployment containerPort and Service port (8888).
+# There is no CONFIG_SERVER_URL here: this workload is the Config Server.
+# There is no Secret referenced by the config-server Deployment.
+# =============================================================================
+data:
+  SERVER_PORT: "8888"

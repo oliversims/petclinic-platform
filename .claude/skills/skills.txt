@@ -1,0 +1,41 @@
+SKILLS
+======
+
+Role
+----
+Reusable playbooks the user (or Claude) can run as named workflows.
+Each skill is a folder with a SKILL.md that lists exact steps.
+
+How this project uses them
+--------------------------
+Ops shortcuts for this platform, invoked like /terraform-plan:
+
+  terraform-plan / terraform-apply
+  deploy-dev / deploy-prod
+  review-terraform / security-scan
+  smoke-test / logs / rollback
+
+They follow this repo's workflow: plan before apply, ArgoCD for
+deploy, never kubectl apply from CI.
+
+How we define them
+------------------
+A folder + SKILL.md with YAML at the top:
+
+  ---
+  name: terraform-plan
+  description: Run terraform init + plan for an environment.
+  disable-model-invocation: true
+  argument-hint: "[env]"
+  ---
+
+  Then numbered steps (init, plan -out plan.out, summarize).
+
+disable-model-invocation: true means you start it (slash command),
+Claude does not auto-pick it.
+
+Tiny example
+------------
+You type: /terraform-plan prod
+Claude cds to terraform/environments/prod/, runs init + plan,
+saves plan.out, and summarizes adds/changes/destroys.

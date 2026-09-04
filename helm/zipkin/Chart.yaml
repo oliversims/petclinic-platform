@@ -1,0 +1,21 @@
+# =============================================================================
+# helm/zipkin/Chart.yaml
+# Purpose: Small in-repo chart for the Zipkin tracing backend.
+# Installed by Terraform into the tracing namespace, not one of the eight app releases.
+# =============================================================================
+
+# =============================================================================
+# Chart identity
+# Purpose: Chart API version, name, description, and type.
+# =============================================================================
+apiVersion: v2
+name: zipkin
+description: Zipkin tracing backend for the petclinic platform
+type: application
+
+# =============================================================================
+# Versions
+# Purpose: Chart version and application version.
+# =============================================================================
+version: 0.1.0
+appVersion: "3.5.1"

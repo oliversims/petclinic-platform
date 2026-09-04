@@ -1,0 +1,38 @@
+# =============================================================================
+# k8s-reference/base/vets-service/configmap.yaml
+# Purpose: Non-secret settings. Secret values arrive from ESO-synced Secrets.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a ConfigMap.
+# =============================================================================
+apiVersion: v1
+kind: ConfigMap
+
+# =============================================================================
+# ConfigMap metadata
+# Purpose: Defines the ConfigMap name, namespace, and identifying labels.
+# The Deployment envFrom.configMapRef.name must be exactly vets-service-config.
+# =============================================================================
+metadata:
+  name: vets-service-config
+  namespace: petclinic-dev
+  labels:
+    app.kubernetes.io/name: vets-service
+    app.kubernetes.io/part-of: petclinic
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/component: service
+
+# =============================================================================
+# ConfigMap data
+# Purpose: Non-secret environment variables injected into the container.
+# SERVER_PORT must match the Deployment containerPort and Service port (8083).
+# CONFIG_SERVER_URL uses the config-server Service DNS name and port 8888.
+# SPRING_DATASOURCE_URL is a placeholder; real endpoint comes from Terraform rds_endpoint.
+# Database username and password come from the rds-credentials Secret, not this ConfigMap.
+# =============================================================================
+data:
+  SERVER_PORT: "8083"
+  CONFIG_SERVER_URL: "http://config-server:8888"
+  SPRING_DATASOURCE_URL: "jdbc:mysql://{rds-endpoint}:3306/petclinic"

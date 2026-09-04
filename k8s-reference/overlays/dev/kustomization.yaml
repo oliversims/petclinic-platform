@@ -1,0 +1,61 @@
+# =============================================================================
+# k8s-reference/overlays/dev/kustomization.yaml
+# Purpose: Dev namespace and petclinic-dev image prefix.
+#
+# Image registry host comes from Terraform output ecr_registry (replace ACCOUNT).
+# RDS JDBC URL comes from Terraform output rds_jdbc_url.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines a Kustomize overlay that wraps k8s-reference/base for the dev cluster.
+# Apply with: kubectl apply -k k8s-reference/overlays/dev
+# Argo CD does not use this overlay; it deploys helm/petclinic-service with
+# values from helm-values/dev.yaml instead.
+# =============================================================================
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# =============================================================================
+# Target namespace
+# Purpose: Defines the namespace Kustomize stamps onto every resource from ../../base.
+# Must match helm-values/dev.yaml (namespace: petclinic-dev) and the
+# destination in k8s/argocd/projects/petclinic-dev.yaml.
+# =============================================================================
+namespace: petclinic-dev
+
+# =============================================================================
+# Base resources this overlay builds on
+# Purpose: Defines the shared workload list from k8s-reference/base/kustomization.yaml
+# (eight services). This overlay does not add HPA or
+# PDB files — those live only in k8s-reference/overlays/prod.
+# =============================================================================
+resources:
+  - ../../base
+
+# =============================================================================
+# Replica counts for every Deployment
+# Purpose: Defines one Pod per Deployment. Each name must match metadata.name of a
+# Deployment in k8s-reference/base/<service>/deployment.yaml.
+# One replica per service. The base already says 1; stating it here makes the
+# dev/prod difference visible in one place (PETPLAT-45).
+# helm-values/dev.yaml sets replicaCount: 1 for the same reason when Argo CD
+# is the deployer.
+# =============================================================================
+replicas:
+  - name: config-server
+    count: 1
+  - name: discovery-server
+    count: 1
+  - name: api-gateway
+    count: 1
+  - name: customers-service
+    count: 1
+  - name: visits-service
+    count: 1
+  - name: vets-service
+    count: 1
+  - name: genai-service
+    count: 1
+  - name: admin-server
+    count: 1

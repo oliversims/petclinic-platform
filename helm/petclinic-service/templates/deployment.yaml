@@ -1,0 +1,193 @@
+# =============================================================================
+# helm/petclinic-service/templates/deployment.yaml
+# Purpose: Probes, resources, init containers, and env for one service.
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as a Deployment.
+# =============================================================================
+apiVersion: apps/v1
+kind: Deployment
+
+# =============================================================================
+# Deployment metadata
+# Purpose: Name, namespace, and labels from chart helpers.
+# =============================================================================
+metadata:
+  name: {{ include "petclinic-service.name" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "petclinic-service.labels" . | nindent 4 }}
+
+# =============================================================================
+# Deployment specification
+# Purpose: Replicas, selector, and Pod template.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Pod replicas
+  # Purpose: Replica count from the chart helper.
+  # =============================================================================
+  replicas: {{ include "petclinic-service.replicas" . }}
+
+  # =============================================================================
+  # Pod selector
+  # Purpose: Must match Pod template labels.
+  # =============================================================================
+  selector:
+    matchLabels:
+      {{- include "petclinic-service.selectorLabels" . | nindent 6 }}
+
+  # =============================================================================
+  # Pod template
+  # Purpose: Defines the structure of each new Pod.
+  # =============================================================================
+  template:
+
+    # =============================================================================
+    # Pod labels
+    # Purpose: Labels applied to every Pod created by this Deployment.
+    # =============================================================================
+    metadata:
+      labels:
+        {{- include "petclinic-service.labels" . | nindent 8 }}
+
+    # =============================================================================
+    # Pod specification
+    # Purpose: Identity, security, init containers, and main container.
+    # =============================================================================
+    spec:
+
+      # =============================================================================
+      # ServiceAccount
+      # Purpose: Kubernetes identity used by this Pod.
+      # =============================================================================
+      serviceAccountName: {{ include "petclinic-service.name" . }}
+
+      # =============================================================================
+      # Pod security context
+      # Purpose: Runs the Pod as a non-root Linux user.
+      # =============================================================================
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+
+      {{- with .Values.topologySpreadConstraints }}
+      # =============================================================================
+      # Topology spread
+      # Purpose: Spreads Pods across availability zones when replicas > 1.
+      # =============================================================================
+      topologySpreadConstraints:
+        {{- range . }}
+        - maxSkew: {{ .maxSkew }}
+          topologyKey: {{ .topologyKey | quote }}
+          whenUnsatisfiable: {{ .whenUnsatisfiable }}
+          labelSelector:
+            matchLabels:
+              {{- include "petclinic-service.selectorLabels" $ | nindent 14 }}
+        {{- end }}
+      {{- end }}
+
+      {{- with .Values.initContainers }}
+      # =============================================================================
+      # Init containers
+      # Purpose: Waits for required services before starting the main container.
+      # =============================================================================
+      initContainers:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+      # =============================================================================
+      # Application containers
+      # Purpose: Defines the main Spring Boot container.
+      # =============================================================================
+      containers:
+        - name: {{ include "petclinic-service.name" . }}
+          image: "{{ include "petclinic-service.image" . }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+
+          # =============================================================================
+          # Container port
+          # Purpose: HTTP port used by the Spring Boot application.
+          # =============================================================================
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+
+          # =============================================================================
+          # Application environment variables
+          # Purpose: Spring profiles plus optional env and Secret refs.
+          # =============================================================================
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: "{{ .Values.springProfiles }}"
+            {{- with .Values.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- range .Values.secrets }}
+            - name: {{ .name }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .secretName }}
+                  key: {{ .key }}
+            {{- end }}
+
+          # =============================================================================
+          # ConfigMap environment variables
+          # Purpose: Loads additional env vars from the service ConfigMap.
+          # =============================================================================
+          envFrom:
+            - configMapRef:
+                name: {{ include "petclinic-service.name" . }}-config
+
+          # =============================================================================
+          # Container resources
+          # Purpose: CPU and memory requests/limits from values.
+          # =============================================================================
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+
+          # =============================================================================
+          # Startup probe
+          # Purpose: Checks whether the Spring Boot application has started.
+          # =============================================================================
+          startupProbe:
+            httpGet:
+              path: {{ .Values.probes.startup.path }}
+              port: {{ .Values.service.port }}
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.startup.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+
+          # =============================================================================
+          # Readiness probe
+          # Purpose: Checks whether the Pod is ready to receive traffic.
+          # =============================================================================
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.readiness.path }}
+              port: {{ .Values.service.port }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+
+          # =============================================================================
+          # Liveness probe
+          # Purpose: Checks whether the application is still running correctly.
+          # =============================================================================
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.liveness.path }}
+              port: {{ .Values.service.port }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+
+          # =============================================================================
+          # Container security context
+          # Purpose: Prevents privilege escalation and drops capabilities.
+          # =============================================================================
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}

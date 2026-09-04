@@ -1,0 +1,64 @@
+# =============================================================================
+# helm-values/dev.yaml
+# Purpose: Dev environment overrides. Merged LAST, so what it sets wins.
+# Forces HPA and PDB off for every service; dev runs one replica of everything.
+# =============================================================================
+
+# =============================================================================
+# Namespace
+# Purpose: Target namespace for all dev releases.
+# =============================================================================
+namespace: petclinic-dev
+
+# =============================================================================
+# Replicas
+# Purpose: Default replica count for every service in dev.
+# =============================================================================
+replicaCount: 1
+
+# =============================================================================
+# Container image registry
+# Purpose: ECR registry prefix for petclinic-dev images.
+# =============================================================================
+image:
+  registry: 742934034265.dkr.ecr.us-east-1.amazonaws.com/petclinic-dev
+
+# =============================================================================
+# Horizontal Pod Autoscaler
+# Purpose: Disabled for all services in dev.
+# =============================================================================
+autoscaling:
+  enabled: false
+
+# =============================================================================
+# Pod Disruption Budget
+# Purpose: Disabled for all services in dev.
+# =============================================================================
+podDisruptionBudget:
+  enabled: false
+
+# =============================================================================
+# Topology spread
+# Purpose: Spreads Pods across availability zones when replicas > 1.
+# =============================================================================
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
+
+# =============================================================================
+# Public ALB Ingress inputs
+# Purpose: Host, cert, security group, and load balancer name (from terraform output).
+# =============================================================================
+ingress:
+  host: petclinic-dev.simsoliver.com
+  certificateArn: arn:aws:acm:us-east-1:742934034265:certificate/b5deb4ec-e1ae-488e-9ba4-ca5372e089d6
+  albSecurityGroupId: sg-013d30632d6db7eeb
+  loadBalancerName: petclinic-dev
+  groupName: petclinic-dev
+
+# =============================================================================
+# JDBC URL (deep-merges into service configData; used by customers/vets/visits)
+# =============================================================================
+configData:
+  SPRING_DATASOURCE_URL: "jdbc:mysql://petclinic-dev-mysql.coem6gby0vqn.us-east-1.rds.amazonaws.com:3306/petclinic"

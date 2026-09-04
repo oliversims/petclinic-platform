@@ -1,0 +1,69 @@
+These YAML files tell External Secrets Operator (ESO) to copy secrets
+from AWS Secrets Manager into Kubernetes. They do not contain secret values.
+
+WHAT EACH FILE IS FOR
+---------------------
+cluster-secret-store.yaml
+  Connects ESO to AWS Secrets Manager. Apply this first (after ESO is running).
+
+sample-external-secret.yaml
+  Optional smoke test. Proves ESO can read AWS Secrets Manager using IRSA
+  (it copies the RDS username into a throwaway Kubernetes secret).
+  Delete after it works. Does not prove the app can use secrets.
+
+rds-credentials.yaml
+  Copies the database username and password into Kubernetes
+  (namespace petclinic-dev). Needs that namespace first.
+
+openai-api-key.yaml
+  Copies the OpenAI API key into Kubernetes (namespace petclinic-dev).
+  Needs that namespace first.
+
+
+HOW TO RUN THEM (IN ORDER)
+--------------------------
+From the petclinic-platform folder.
+
+1. Terraform must already have created the cluster and installed ESO.
+   In terraform/environments/dev, install_eso must be true, then:
+
+   terraform apply
+
+   Wait until pods are up:
+
+   kubectl get pods -n external-secrets
+
+2. Connect ESO to AWS:
+
+   kubectl apply -f k8s/base/external-secrets/cluster-secret-store.yaml
+
+3. Optional test:
+
+   kubectl apply -f k8s/base/external-secrets/sample-external-secret.yaml
+
+   Wait a few seconds, then:
+
+   kubectl get externalsecret eso-smoke-test -n external-secrets
+   kubectl get secret eso-smoke-test -n external-secrets
+
+   It worked if you see something like:
+
+   NAME             STORE                  STATUS         READY
+   eso-smoke-test   aws-secrets-manager    SecretSynced   True
+
+   NAME             TYPE     DATA   AGE
+   eso-smoke-test   Opaque   1      10s
+
+   Then delete the test:
+
+   kubectl delete -f k8s/base/external-secrets/sample-external-secret.yaml
+
+4. After the petclinic-dev namespace exists:
+
+   kubectl apply -f k8s/base/external-secrets/rds-credentials.yaml
+   kubectl apply -f k8s/base/external-secrets/openai-api-key.yaml
+
+   For prod (petclinic-prod namespace):
+
+   kubectl apply -f k8s/base/external-secrets/rds-credentials-prod.yaml
+   kubectl apply -f k8s/base/external-secrets/openai-api-key-prod.yaml

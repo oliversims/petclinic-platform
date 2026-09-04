@@ -1,0 +1,24 @@
+Budget (root, not a module)
+===========================
+
+File: terraform/environments/dev/budget.tf
+
+Role: a monthly cost ceiling so the bill does not surprise anyone.
+It does not stop spend by itself. It only emails.
+
+This first apply creates 1 Terraform resource.
+
+
+What is created
+
+  - Cost budget petclinic-dev-monthly
+    Limit: 200 USD
+    Filter: tag Environment = dev
+    Emails at 50%, 80%, and 100% of actual spend
+
+
+How it is used
+
+  AWS sends a confirmation to the address in terraform.tfvars.
+  Alerts do not start until that mail is accepted.
+  This is created on the first apply. It does not depend on the cluster.

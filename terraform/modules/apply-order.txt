@@ -1,0 +1,38 @@
+APPLY ORDER — terraform modules
+================================
+
+Terraform builds a dependency graph, so numbers below are the logical
+order from environments/{dev,prod}/main.tf (what must exist before what).
+
+
+Wave 1 — first apply (install_* = false)
+----------------------------------------
+1. vpc              Network: subnets, NAT, security groups
+2. eks              Cluster + node group (needs VPC)
+3. ecr              Image repositories (independent of EKS timing)
+4. rds              MySQL (needs VPC private subnets + RDS SG)
+5. secrets          OpenAI secret (ESO IAM/Helm wait for wave 2)
+6. github-oidc      CI role (dev root only; account-scoped)
+7. dns              Zone lookup + ACM cert (LB/ExternalDNS Helm wait)
+8. observability    Nothing material until install_observability
+9. karpenter        Nothing material until install_karpenter
+
+Also at the env root (not a module): budget.tf
+
+
+Wave 2 — second apply (install_* = true)
+----------------------------------------
+Same module list; flags unlock add-ons inside those modules:
+
+  eks            → EBS CSI, add-ons, gp3 StorageClass
+  secrets        → ESO IAM + Helm
+  dns            → LB controller + ExternalDNS (+ Argo CD ALB SG)
+  observability  → Prometheus/Grafana/Loki/Zipkin (+ ingress SGs)
+  karpenter      → IAM, SQS/EventBridge, Helm
+
+
+Notes
+-----
+- ecr and github-oidc do not need the cluster to exist.
+- dns ACM is issued in wave 1 when create_acm_certificate = true (dev).
+- App ALBs are NOT created by these modules; they appear later from Ingress.

@@ -1,0 +1,32 @@
+HOOKS
+=====
+
+Role
+----
+Small scripts that run automatically around Claude's tool calls.
+They can block a command, warn you, or suggest a next step.
+
+How this project uses them
+--------------------------
+Wired in .claude/settings.json.
+
+Before Bash (or Terraform MCP) runs:
+  block-destroy.sh          — no terraform destroy
+  block-dangerous-rm.sh     — no rm -rf on terraform/, k8s/, helm/, ...
+  warn-apply-without-plan.sh
+  block-secret-commit.sh    — no git add of .env / .tfvars / keys
+  block-mcp-destroy.sh      — same destroy block via MCP
+
+After Write/Edit:
+  suggest-validate.sh       — remind to terraform validate / helm template
+
+How we define them
+------------------
+1. A .sh file in this folder (reads JSON from stdin, exit 0 = allow, exit 2 = block).
+2. A matching entry in .claude/settings.json under PreToolUse or PostToolUse.
+
+Tiny example
+------------
+Claude tries: terraform destroy
+block-destroy.sh sees "destroy", prints a message, exits 2.
+The command never runs.

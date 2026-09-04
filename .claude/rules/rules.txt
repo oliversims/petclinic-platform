@@ -1,0 +1,41 @@
+RULES
+=====
+
+Role
+----
+Path-scoped conventions. When Claude edits matching files, these
+rules are loaded so the code follows this repo's standards.
+
+How this project uses them
+--------------------------
+  terraform.md     — terraform/**/*.tf
+  kubernetes.md    — k8s/base (live) + k8s-reference (pre-Helm reference)
+  argocd.md        — k8s/argocd/**
+  helm.md          — Helm charts and helm-values/
+  dns.md           — terraform/modules/dns (Route 53, ACM, LB controller, ExternalDNS)
+  observability.md — terraform/modules/observability, helm/zipkin, k8s/observability
+  karpenter.md     — terraform/modules/karpenter, k8s/karpenter
+  security.md      — k8s/security, vpc-cni network policy, Checkov
+  pipelines.md     — .github/workflows
+  docs.md          — documentation
+
+Examples of what they enforce: naming (petclinic-{env}-{resource}),
+required tags, probes, no secrets in YAML, SHA image tags.
+
+How we define them
+------------------
+A .md file with a paths list at the top, then the rules:
+
+  ---
+  paths:
+    - "terraform/**/*.tf"
+  ---
+
+  # Terraform Rules
+  Every module must have main.tf, variables.tf, outputs.tf, versions.tf.
+
+Tiny example
+------------
+You add a new AWS resource in terraform/modules/eks/.
+terraform.md is attached automatically.
+Claude includes the Project / Environment / ManagedBy tags.

@@ -1,0 +1,26 @@
+Karpenter module
+================
+
+Role: extra worker nodes when pods cannot schedule, on top of the
+managed node group. NodePool / EC2NodeClass are Git YAML, not Terraform.
+
+
+What is created now (wave 1)
+
+  - Nothing. install_karpenter = false skips IAM, SQS, EventBridge, and Helm.
+
+
+Held for the second apply (install_karpenter = true)
+
+  - Controller IRSA role + 6 upstream policies
+  - Instance profile wrapping the existing EKS node role
+  - SQS interruption queue + EventBridge rules
+  - Helm karpenter-crd, then karpenter
+
+  Then the operator applies k8s/karpenter/{env}/*.yaml.
+
+
+How it is used
+
+  When pods are Pending, Karpenter launches EC2 and later removes unused
+  nodes. Interruption drains pods before AWS reclaims an instance.

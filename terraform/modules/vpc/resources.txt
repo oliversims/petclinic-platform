@@ -1,0 +1,42 @@
+VPC module
+==========
+
+Role: the private network everything else sits in. Public edge for the
+load balancer and NAT. Private subnets for EKS and RDS.
+
+
+What is created
+
+  Core
+  - 1 VPC with DNS hostnames on
+  - 1 Internet Gateway
+  - 1 unused default security group (emptied so nothing uses it by accident)
+
+  Subnets
+  - 2 public  — NAT, ALB
+  - 2 private — EKS nodes and RDS
+
+  NAT (one in dev; one per AZ in prod)
+  - Elastic IP(s) + NAT Gateway(s)
+    Private subnets send outbound traffic here (image pulls, HTTPS).
+
+  Routing
+  - Public route table + default route to the Internet Gateway
+  - Private route tables + default routes to NAT
+  - S3 gateway endpoint on the private tables (ECR layers skip NAT)
+
+  Security groups
+  - alb         — internet 80/443 in; egress to pods :8080 (target-type ip)
+  - eks-cluster — Kubernetes API from worker nodes
+  - eks-node    — control plane, inter-node, ALB :8080
+  - rds         — MySQL 3306 from worker nodes only; no egress
+  - Explicit egress = [] on each SG (no AWS default allow-all)
+
+
+How it is used
+
+  EKS and RDS land in the private subnets. They have no public IP.
+  The ALB (created later by the Load Balancer Controller) sits in the
+  public subnets and forwards to pod IPs on the node security group.
+
+Nothing in this module is gated. The whole VPC is created on the first apply.

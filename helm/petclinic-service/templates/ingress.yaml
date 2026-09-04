@@ -1,0 +1,67 @@
+# =============================================================================
+# helm/petclinic-service/templates/ingress.yaml
+# Purpose: Public ALB Ingress, rendered when ingress.enabled is true.
+# =============================================================================
+
+{{- if .Values.ingress.enabled }}
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as an Ingress.
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+
+# =============================================================================
+# Ingress metadata
+# Purpose: Name, labels, and AWS Load Balancer Controller annotations.
+# =============================================================================
+metadata:
+  name: {{ include "petclinic-service.name" . }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "petclinic-service.labels" . | nindent 4 }}
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/certificate-arn: "{{ .Values.ingress.certificateArn }}"
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-2-2021-06
+    alb.ingress.kubernetes.io/healthcheck-path: /actuator/health
+    alb.ingress.kubernetes.io/healthcheck-port: "8080"
+    alb.ingress.kubernetes.io/security-groups: "{{ .Values.ingress.albSecurityGroupId }}"
+    alb.ingress.kubernetes.io/manage-backend-security-group-rules: "false"
+    alb.ingress.kubernetes.io/load-balancer-name: "{{ .Values.ingress.loadBalancerName }}"
+    {{- with .Values.ingress.groupName }}
+    alb.ingress.kubernetes.io/group.name: "{{ . }}"
+    {{- end }}
+
+# =============================================================================
+# Ingress specification
+# Purpose: Routes host traffic to the service port.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Ingress class
+  # Purpose: Uses the ALB Ingress class from values.
+  # =============================================================================
+  ingressClassName: {{ .Values.ingress.className }}
+
+  # =============================================================================
+  # Routing rules
+  # Purpose: Sends the configured host to the chart Service.
+  # =============================================================================
+  rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "petclinic-service.name" . }}
+                port:
+                  number: {{ .Values.service.port }}
+{{- end }}

@@ -1,0 +1,68 @@
+# =============================================================================
+# k8s/argocd/ingress/dev.yaml
+# Purpose: Dedicated ALB Ingress for the Argo CD UI on the DEV cluster.
+# Apply after: kubectl apply -k k8s/argocd/install/
+# =============================================================================
+
+# =============================================================================
+# Kubernetes API and resource type
+# Purpose: Defines this Kubernetes resource as an Ingress.
+# =============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+
+# =============================================================================
+# Ingress metadata
+# Purpose: Names the Ingress and configures AWS Load Balancer Controller annotations.
+# certificateArn and security-groups come from terraform output (dev).
+# Dev uses the shared app ALB (group.name petclinic-dev).
+# =============================================================================
+metadata:
+  name: argocd-server
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-server
+    app.kubernetes.io/part-of: argocd
+    app.kubernetes.io/managed-by: kubectl
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/backend-protocol: HTTP
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:us-east-1:742934034265:certificate/b5deb4ec-e1ae-488e-9ba4-ca5372e089d6"
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/ssl-policy: ELBSecurityPolicy-TLS13-1-2-2021-06
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz
+    alb.ingress.kubernetes.io/healthcheck-port: "8080"
+    alb.ingress.kubernetes.io/security-groups: "sg-013d30632d6db7eeb"
+    alb.ingress.kubernetes.io/manage-backend-security-group-rules: "false"
+    alb.ingress.kubernetes.io/load-balancer-name: "petclinic-dev"
+    alb.ingress.kubernetes.io/group.name: "petclinic-dev"
+
+# =============================================================================
+# Ingress specification
+# Purpose: Routes HTTPS traffic for the Argo CD UI host to argocd-server.
+# =============================================================================
+spec:
+
+  # =============================================================================
+  # Ingress class
+  # Purpose: Uses the AWS Load Balancer Controller ALB class.
+  # =============================================================================
+  ingressClassName: alb
+
+  # =============================================================================
+  # Routing rules
+  # Purpose: Sends argocd-dev.simsoliver.com traffic to the argocd-server Service on port 80.
+  # =============================================================================
+  rules:
+    - host: argocd-dev.simsoliver.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: argocd-server
+                port:
+                  number: 80
