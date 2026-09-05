@@ -10,47 +10,39 @@
 # Purpose: Helm release / Kubernetes object name for this service.
 # =============================================================================
 name: config-server
-
 # =============================================================================
 # Component label
 # Purpose: Value for app.kubernetes.io/component.
 # =============================================================================
 component: server
-
 # =============================================================================
 # Container image
 # Purpose: Image repository name and tag placeholder.
 # =============================================================================
 image:
   name: config-server
-  tag: TAG
-
+  tag: b9ba3c9
 # =============================================================================
 # Service port
 # Purpose: ClusterIP and container port for config-server.
 # =============================================================================
 service:
   port: 8888
-
 # =============================================================================
 # Spring profiles
 # Purpose: Active Spring profiles for this service.
 # =============================================================================
 springProfiles: "docker"
-
 # =============================================================================
 # ConfigMap data
 # Purpose: Empty map; SERVER_PORT comes from service.port in the chart.
 # =============================================================================
-configData:
-  {}
-
+configData: {}
 # =============================================================================
 # Init containers
 # Purpose: No dependencies; config-server starts first.
 # =============================================================================
 initContainers: []
-
 # =============================================================================
 # Health probes
 # Purpose: Uses /actuator/health for readiness and liveness.
@@ -60,14 +52,12 @@ probes:
     path: /actuator/health
   liveness:
     path: /actuator/health
-
 # =============================================================================
 # Horizontal Pod Autoscaler
 # Purpose: Disabled for config-server.
 # =============================================================================
 autoscaling:
   enabled: false
-
 # =============================================================================
 # Pod Disruption Budget
 # Purpose: Enabled so one config-server pod stays available.

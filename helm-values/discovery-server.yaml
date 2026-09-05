@@ -10,41 +10,35 @@
 # Purpose: Helm release / Kubernetes object name for this service.
 # =============================================================================
 name: discovery-server
-
 # =============================================================================
 # Component label
 # Purpose: Value for app.kubernetes.io/component.
 # =============================================================================
 component: server
-
 # =============================================================================
 # Container image
 # Purpose: Image repository name and tag placeholder.
 # =============================================================================
 image:
   name: discovery-server
-  tag: TAG
-
+  tag: b9ba3c9
 # =============================================================================
 # Service port
 # Purpose: ClusterIP and container port for discovery-server.
 # =============================================================================
 service:
   port: 8761
-
 # =============================================================================
 # Spring profiles
 # Purpose: Active Spring profiles for this service.
 # =============================================================================
 springProfiles: "docker"
-
 # =============================================================================
 # ConfigMap data
 # Purpose: Non-secret env keys for discovery-server.
 # =============================================================================
 configData:
   CONFIG_SERVER_URL: "http://config-server:8888"
-
 # =============================================================================
 # Init containers
 # Purpose: Waits for Config Server only.
@@ -53,14 +47,12 @@ initContainers:
   - name: wait-for-config-server
     image: busybox:1.36
     command: ['sh', '-c', 'until wget -qO- http://config-server:8888/actuator/health; do sleep 5; done']
-
 # =============================================================================
 # Horizontal Pod Autoscaler
 # Purpose: Disabled for discovery-server.
 # =============================================================================
 autoscaling:
   enabled: false
-
 # =============================================================================
 # Pod Disruption Budget
 # Purpose: Enabled so one discovery-server pod stays available.

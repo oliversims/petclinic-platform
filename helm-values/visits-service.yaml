@@ -10,34 +10,29 @@
 # Purpose: Helm release / Kubernetes object name for this service.
 # =============================================================================
 name: visits-service
-
 # =============================================================================
 # Component label
 # Purpose: Value for app.kubernetes.io/component.
 # =============================================================================
 component: service
-
 # =============================================================================
 # Container image
 # Purpose: Image repository name and tag placeholder.
 # =============================================================================
 image:
   name: visits-service
-  tag: TAG
-
+  tag: b9ba3c9
 # =============================================================================
 # Service port
 # Purpose: ClusterIP and container port for visits-service.
 # =============================================================================
 service:
   port: 8082
-
 # =============================================================================
 # Spring profiles
 # Purpose: Active Spring profiles including MySQL.
 # =============================================================================
 springProfiles: "docker,mysql"
-
 # =============================================================================
 # ConfigMap data
 # Purpose: Non-secret env keys including JDBC URL and Zipkin tracing.
@@ -45,10 +40,8 @@ springProfiles: "docker,mysql"
 configData:
   CONFIG_SERVER_URL: "http://config-server:8888"
   SPRING_DATASOURCE_URL: "jdbc:mysql://{rds-endpoint}:3306/petclinic"
-
   MANAGEMENT_TRACING_EXPORT_ZIPKIN_ENDPOINT: "http://zipkin.tracing.svc:9411/api/v2/spans"
   MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "1.0"
-
 # =============================================================================
 # Secret-backed environment variables
 # Purpose: RDS username/password from the ESO-synced Secret.
@@ -60,7 +53,6 @@ secrets:
   - name: SPRING_DATASOURCE_PASSWORD
     secretName: rds-credentials
     key: password
-
 # =============================================================================
 # Init containers
 # Purpose: Waits for Config Server and Discovery Server before starting.
@@ -72,14 +64,12 @@ initContainers:
   - name: wait-for-discovery-server
     image: busybox:1.36
     command: ['sh', '-c', 'until wget -qO- http://discovery-server:8761/actuator/health; do sleep 5; done']
-
 # =============================================================================
 # Horizontal Pod Autoscaler
 # Purpose: Enabled for visits-service.
 # =============================================================================
 autoscaling:
   enabled: true
-
 # =============================================================================
 # Pod Disruption Budget
 # Purpose: Enabled so one visits-service pod stays available.
