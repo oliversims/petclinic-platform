@@ -21,7 +21,7 @@ component: service
 # =============================================================================
 image:
   name: visits-service
-  tag: e657ac4
+  tag: 283828e
 # =============================================================================
 # Service port
 # Purpose: ClusterIP and container port for visits-service.
