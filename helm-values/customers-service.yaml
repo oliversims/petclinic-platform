@@ -39,7 +39,7 @@ springProfiles: "docker,mysql"
 # =============================================================================
 configData:
   CONFIG_SERVER_URL: "http://config-server:8888"
-  SPRING_DATASOURCE_URL: "jdbc:mysql://{rds-endpoint}:3306/petclinic"
+  SPRING_DATASOURCE_URL: "jdbc:mysql://petclinic-dev-mysql.coem6gby0vqn.us-east-1.rds.amazonaws.com:3306/petclinic"
   MANAGEMENT_TRACING_EXPORT_ZIPKIN_ENDPOINT: "http://zipkin.tracing.svc:9411/api/v2/spans"
   MANAGEMENT_TRACING_SAMPLING_PROBABILITY: "1.0"
 # =============================================================================

@@ -52,13 +52,7 @@ topologySpreadConstraints:
 # =============================================================================
 ingress:
   host: petclinic-dev.simsoliver.com
-  certificateArn: arn:aws:acm:us-east-1:742934034265:certificate/b5deb4ec-e1ae-488e-9ba4-ca5372e089d6
-  albSecurityGroupId: sg-013d30632d6db7eeb
+  certificateArn: arn:aws:acm:us-east-1:742934034265:certificate/01a38873-6e32-4a36-bf7f-d24826f68de9
+  albSecurityGroupId: sg-02366256ddd727d62
   loadBalancerName: petclinic-dev
   groupName: petclinic-dev
-
-# =============================================================================
-# JDBC URL (deep-merges into service configData; used by customers/vets/visits)
-# =============================================================================
-configData:
-  SPRING_DATASOURCE_URL: "jdbc:mysql://petclinic-dev-mysql.coem6gby0vqn.us-east-1.rds.amazonaws.com:3306/petclinic"
