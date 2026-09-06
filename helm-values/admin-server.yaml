@@ -21,7 +21,7 @@ component: admin
 # =============================================================================
 image:
   name: admin-server
-  tag: 283828e
+  tag: 946aacd
 # =============================================================================
 # Service port
 # Purpose: ClusterIP and container port for admin-server.

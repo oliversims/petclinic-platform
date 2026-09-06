@@ -21,7 +21,7 @@ component: gateway
 # =============================================================================
 image:
   name: api-gateway
-  tag: 283828e
+  tag: 946aacd
 # =============================================================================
 # Service port
 # Purpose: ClusterIP and container port for api-gateway.

@@ -21,7 +21,7 @@ component: service
 # =============================================================================
 image:
   name: customers-service
-  tag: 283828e
+  tag: 946aacd
 # =============================================================================
 # Service port
 # Purpose: ClusterIP and container port for customers-service.

@@ -21,7 +21,7 @@ component: server
 # =============================================================================
 image:
   name: config-server
-  tag: 283828e
+  tag: 946aacd
 # =============================================================================
 # Service port
 # Purpose: ClusterIP and container port for config-server.
